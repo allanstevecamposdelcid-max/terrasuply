@@ -165,7 +165,7 @@ export default function DashboardPage() {
       {/* HEADER */}
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight">
-          Dashboard
+          Terra Suply System
         </h1>
         <p className="text-sm text-muted">
           Resumen general del negocio

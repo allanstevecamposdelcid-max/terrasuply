@@ -40,8 +40,8 @@ export default function AppSidebar() {
             <LayoutDashboard size={16} className="text-green-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold leading-tight">Sistema Contable</p>
-            <p className="text-[11px] text-[rgb(var(--muted))]">TerraSuply</p>
+            <p className="text-sm font-semibold leading-tight">Terra Suply System</p>
+            <p className="text-[11px] text-[rgb(var(--muted))]">Panel de control</p>
           </div>
         </div>
       </div>
