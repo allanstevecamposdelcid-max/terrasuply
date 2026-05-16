@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import {
   TrendingUp,
   Clock,
@@ -13,6 +14,8 @@ import {
   Boxes,
   Truck,
   Calendar,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -43,6 +46,8 @@ type Expense = {
 ====================== */
 
 export default function DashboardPage() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +91,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+    setMounted(true);
   }, []);
 
   /* ======================
@@ -163,13 +169,25 @@ export default function DashboardPage() {
   return (
     <main className="max-w-6xl mx-auto px-6 py-10 space-y-10">
       {/* HEADER */}
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Terra Suply System
-        </h1>
-        <p className="text-sm text-muted">
-          Resumen general del negocio
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Terra Suply System
+          </h1>
+          <p className="text-sm text-muted">
+            Resumen general del negocio
+          </p>
+        </div>
+        {mounted && (
+          <button
+            type="button"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="btn card-soft shrink-0 mt-1"
+            aria-label="Cambiar tema"
+          >
+            {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        )}
       </header>
 
       {/* FILTROS */}
