@@ -1,5 +1,4 @@
-import AppHeader from "@/components/AppHeader";
-import AppSidebar from "@/components/AppSidebar";
+import AppShell from "@/components/AppShell";
 
 export default function AppLayout({
   children,
@@ -8,14 +7,7 @@ export default function AppLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <AppHeader />
-
-      <div className="flex flex-1">
-        <AppSidebar />
-        <main className="flex-1 px-6 py-8">
-          {children}
-        </main>
-      </div>
+      <AppShell>{children}</AppShell>
     </div>
   );
 }

@@ -117,3 +117,14 @@ select:focus {
   border-color: rgb(var(--accent));
   box-shadow: 0 0 0 2px rgb(var(--accent) / 0.2);
 }
+
+/* ======================
+   MOBILE SAFE AREA
+   ====================== */
+
+/* Prevent content hiding behind bottom nav on iOS */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-safe-bottom {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+}
