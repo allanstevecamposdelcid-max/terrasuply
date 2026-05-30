@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
   TrendingUp,
   Clock,
   CheckCircle,
   Wallet,
-  Plus,
-  List,
-  BarChart3,
-  Boxes,
-  Truck,
   Calendar,
   Moon,
   Sun,
@@ -273,25 +267,6 @@ export default function DashboardPage() {
         />
       </section>
 
-      {/* ACCIONES */}
-      <section className="space-y-4">
-        <h2 className="text-xs font-medium text-muted uppercase tracking-wider">
-          Gestión
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Action href="/ventas/nueva" icon={<Plus size={18} />} label="Nueva venta" primary />
-          <Action href="/inventario" icon={<Boxes size={18} />} label="Inventario" />
-          <Action href="/ventas" icon={<List size={18} />} label="Libro diario" />
-          <Action href="/caja" icon={<Wallet size={18} />} label="Caja diaria" />
-          <Action href="/graficas" icon={<BarChart3 size={18} />} label="Gráficas" />
-          <Action
-            href="https://trackingt.github.io/order-tracking/admin.html"
-            icon={<Truck size={18} />}
-            label="Seguimiento pedidos"
-          />
-        </div>
-      </section>
 
       {loading && <p className="text-sm opacity-60">Cargando datos…</p>}
     </main>
@@ -330,55 +305,3 @@ function Metric({
   );
 }
 
-function Action({
-  href,
-  icon,
-  label,
-  primary,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  primary?: boolean;
-}) {
-  const isExternal = href.startsWith("http");
-
-  const base =
-    "group card p-5 flex items-center gap-4 transition hover:-translate-y-px hover:shadow-md";
-
-  if (isExternal) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={base}
-      >
-        <div className="h-9 w-9 rounded-md flex items-center justify-center bg-white/5 text-muted">
-          {icon}
-        </div>
-        <span className="font-medium">{label}</span>
-      </a>
-    );
-  }
-
-  return (
-    <Link
-      href={href}
-      className={`${base} ${
-        primary ? "border-green-500/30" : ""
-      }`}
-    >
-      <div
-        className={`h-9 w-9 rounded-md flex items-center justify-center ${
-          primary
-            ? "bg-green-500/20 text-green-400"
-            : "bg-white/5 text-muted"
-        }`}
-      >
-        {icon}
-      </div>
-      <span className="font-medium">{label}</span>
-    </Link>
-  );
-}
