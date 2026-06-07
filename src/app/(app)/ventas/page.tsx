@@ -35,6 +35,7 @@ type Sale = {
   customer_name: string;
   customer_phone: string | null;
   customer_address: string | null;
+  description: string | null;
   total: number;
   dtf_cost: number;
   advance_payment: number;
@@ -69,6 +70,7 @@ export default function VentasPage() {
         customer_name,
         customer_phone,
         customer_address,
+        description,
         total,
         dtf_cost,
         advance_payment,
@@ -352,12 +354,18 @@ export default function VentasPage() {
                   </span>
                 </button>
 
-                {/* DETALLE: productos + imágenes */}
+                {/* DETALLE: descripción + productos + imágenes */}
                 {open && (
                   <div
                     className="space-y-2.5 pt-2.5 border-t"
                     style={{ borderColor: "rgb(var(--border))" }}
                   >
+                    {s.description && (
+                      <p className="text-sm text-muted whitespace-pre-wrap">
+                        {s.description}
+                      </p>
+                    )}
+
                     {s.sale_items.map((i) => (
                       <div key={i.id} className="flex items-center gap-3">
                         {i.image_url ? (

@@ -99,21 +99,25 @@ body {
    ====================== */
 
 input,
-select {
+select,
+textarea {
   background-color: rgb(var(--card-soft));
   border: 1px solid rgb(var(--border));
   border-radius: 12px;
   padding: 10px 12px;
   outline: none;
   color: rgb(var(--text));
+  font-family: inherit;
 }
 
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: rgb(var(--muted));
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: rgb(var(--accent));
   box-shadow: 0 0 0 2px rgb(var(--accent) / 0.2);
 }

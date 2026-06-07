@@ -10,6 +10,8 @@ import {
   Calendar,
   Moon,
   Sun,
+  Shirt,
+  Printer,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
@@ -267,6 +269,25 @@ export default function DashboardPage() {
           icon={<Wallet size={18} />}
           raw
         />
+      </section>
+
+      {/* COSTOS (información confidencial) */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted">Costos del periodo filtrado</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Metric
+            label="Gasto en playeras"
+            value={<ProfitValue value={`Q${costoProductos.toFixed(2)}`} className="text-3xl font-semibold" />}
+            icon={<Shirt size={18} />}
+            raw
+          />
+          <Metric
+            label="Costo DTF"
+            value={<ProfitValue value={`Q${dtfTotal.toFixed(2)}`} className="text-3xl font-semibold" />}
+            icon={<Printer size={18} />}
+            raw
+          />
+        </div>
       </section>
 
 

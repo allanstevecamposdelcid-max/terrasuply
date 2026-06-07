@@ -52,6 +52,7 @@ export default function NuevaVentaPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [description, setDescription] = useState("");
 
   const [dtfCost, setDtfCost] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
@@ -210,6 +211,7 @@ export default function NuevaVentaPage() {
       p_items: items,
       p_dtf_cost: dtfCost,
       p_advance_payment: advancePayment || 0,
+      p_description: description || null,
     });
 
     setLoading(false);
@@ -260,6 +262,18 @@ export default function NuevaVentaPage() {
               placeholder="Dirección (opcional)"
             />
           </div>
+        </div>
+
+        {/* DESCRIPCIÓN DE LA VENTA */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Descripción de la venta</label>
+          <textarea
+            className="w-full resize-none"
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Detalles del pedido: tallas, colores, instrucciones especiales… (opcional)"
+          />
         </div>
 
         {/* PRODUCTOS */}

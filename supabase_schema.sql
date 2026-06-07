@@ -28,6 +28,7 @@ create table if not exists sales (
   customer_name     text        not null,
   customer_phone    text,
   customer_address  text,
+  description       text,
   total             numeric(10,2) not null default 0,
   dtf_cost          numeric(10,2) not null default 0,
   advance_payment   numeric(10,2) not null default 0,
@@ -79,7 +80,8 @@ create or replace function create_sale_multi(
   p_customer_address  text,
   p_items             jsonb,
   p_dtf_cost          numeric,
-  p_advance_payment   numeric default 0
+  p_advance_payment   numeric default 0,
+  p_description       text default null
 )
 returns uuid
 language plpgsql
@@ -98,10 +100,10 @@ begin
       * (v_item->>'unit_price')::numeric;
   end loop;
 
-  -- Inserta la venta (incluye dirección y anticipo)
+  -- Inserta la venta (incluye dirección, anticipo y descripción)
   insert into sales (
     customer_name, customer_phone, customer_address,
-    total, dtf_cost, advance_payment
+    total, dtf_cost, advance_payment, description
   )
   values (
     p_customer_name,
@@ -109,7 +111,8 @@ begin
     p_customer_address,
     v_total,
     coalesce(p_dtf_cost, 0),
-    coalesce(p_advance_payment, 0)
+    coalesce(p_advance_payment, 0),
+    p_description
   )
   returning id into v_sale_id;
 
