@@ -11,13 +11,11 @@ import {
   Menu,
   X,
   Wallet,
-  BarChart3,
   Truck,
 } from "lucide-react";
 
 const menuItems = [
   { href: "/caja", label: "Caja", icon: Wallet },
-  { href: "/graficas", label: "Gráficas", icon: BarChart3 },
   {
     href: "https://trackingt.github.io/order-tracking/admin.html",
     label: "Seguimiento pedidos",

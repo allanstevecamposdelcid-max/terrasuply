@@ -12,6 +12,7 @@ import {
   Sun,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { ProfitValue } from "@/components/ProfitGate";
 
 /* ======================
    TYPES
@@ -262,8 +263,9 @@ export default function DashboardPage() {
         />
         <Metric
           label="Ganancia"
-          value={`Q${ganancia.toFixed(2)}`}
+          value={<ProfitValue value={`Q${ganancia.toFixed(2)}`} className="text-3xl font-semibold" />}
           icon={<Wallet size={18} />}
+          raw
         />
       </section>
 
@@ -282,11 +284,13 @@ function Metric({
   label,
   value,
   accent,
+  raw,
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
   accent?: boolean;
+  raw?: boolean;
 }) {
   return (
     <div className="card p-5 flex flex-col gap-3">
@@ -294,13 +298,17 @@ function Metric({
         {icon}
         <span>{label}</span>
       </div>
-      <div
-        className={`text-3xl font-semibold ${
-          accent ? "text-green-400" : ""
-        }`}
-      >
-        {value}
-      </div>
+      {raw ? (
+        value
+      ) : (
+        <div
+          className={`text-3xl font-semibold ${
+            accent ? "text-green-400" : ""
+          }`}
+        >
+          {value}
+        </div>
+      )}
     </div>
   );
 }

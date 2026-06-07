@@ -24,14 +24,16 @@ create index if not exists products_sku_idx  on products (sku);
 --  2. SALES (ventas)
 -- ─────────────────────────────────────────
 create table if not exists sales (
-  id              uuid primary key default gen_random_uuid(),
-  customer_name   text        not null,
-  customer_phone  text,
-  total           numeric(10,2) not null default 0,
-  dtf_cost        numeric(10,2) not null default 0,
-  status          text        not null default 'pendiente'
-                    check (status in ('pendiente', 'enviado')),
-  created_at      timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  customer_name     text        not null,
+  customer_phone    text,
+  customer_address  text,
+  total             numeric(10,2) not null default 0,
+  dtf_cost          numeric(10,2) not null default 0,
+  advance_payment   numeric(10,2) not null default 0,
+  status            text        not null default 'pendiente'
+                      check (status in ('pendiente', 'enviado')),
+  created_at        timestamptz not null default now()
 );
 
 create index if not exists sales_created_at_idx on sales (created_at desc);
@@ -47,7 +49,8 @@ create table if not exists sale_items (
   product_name  text        not null,
   qty           integer     not null check (qty > 0),
   unit_price    numeric(10,2) not null default 0,
-  unit_cost     numeric(10,2) not null default 0
+  unit_cost     numeric(10,2) not null default 0,
+  image_url     text
 );
 
 create index if not exists sale_items_sale_id_idx on sale_items (sale_id);
@@ -71,10 +74,12 @@ create index if not exists expenses_date_idx on expenses (expense_date desc);
 --     en una sola transacción atómica.
 -- ─────────────────────────────────────────
 create or replace function create_sale_multi(
-  p_customer_name   text,
-  p_customer_phone  text,
-  p_items           jsonb,
-  p_dtf_cost        numeric
+  p_customer_name     text,
+  p_customer_phone    text,
+  p_customer_address  text,
+  p_items             jsonb,
+  p_dtf_cost          numeric,
+  p_advance_payment   numeric default 0
 )
 returns uuid
 language plpgsql
@@ -93,16 +98,26 @@ begin
       * (v_item->>'unit_price')::numeric;
   end loop;
 
-  -- Inserta la venta
-  insert into sales (customer_name, customer_phone, total, dtf_cost)
-  values (p_customer_name, p_customer_phone, v_total, coalesce(p_dtf_cost, 0))
+  -- Inserta la venta (incluye dirección y anticipo)
+  insert into sales (
+    customer_name, customer_phone, customer_address,
+    total, dtf_cost, advance_payment
+  )
+  values (
+    p_customer_name,
+    p_customer_phone,
+    p_customer_address,
+    v_total,
+    coalesce(p_dtf_cost, 0),
+    coalesce(p_advance_payment, 0)
+  )
   returning id into v_sale_id;
 
-  -- Inserta cada ítem y descuenta stock
+  -- Inserta cada ítem (incluye imagen del producto) y descuenta stock
   for v_item in select * from jsonb_array_elements(p_items)
   loop
     insert into sale_items (
-      sale_id, product_id, product_name, qty, unit_price, unit_cost
+      sale_id, product_id, product_name, qty, unit_price, unit_cost, image_url
     )
     values (
       v_sale_id,
@@ -110,7 +125,8 @@ begin
       v_item->>'product_name',
       (v_item->>'qty')::integer,
       (v_item->>'unit_price')::numeric,
-      (v_item->>'unit_cost')::numeric
+      (v_item->>'unit_cost')::numeric,
+      v_item->>'image_url'
     );
 
     -- Descuenta stock del producto
@@ -156,6 +172,32 @@ create policy "Acceso público a gastos"
   on expenses for all
   using (true)
   with check (true);
+
+-- ─────────────────────────────────────────
+--  7. STORAGE: bucket público para imágenes
+--     de productos vendidos (se guarda la URL
+--     pública resultante en sale_items.image_url)
+-- ─────────────────────────────────────────
+insert into storage.buckets (id, name, public)
+values ('sale-images', 'sale-images', true)
+on conflict (id) do nothing;
+
+create policy "Lectura pública imágenes de ventas"
+  on storage.objects for select
+  using (bucket_id = 'sale-images');
+
+create policy "Subida pública imágenes de ventas"
+  on storage.objects for insert
+  with check (bucket_id = 'sale-images');
+
+create policy "Gestión pública imágenes de ventas"
+  on storage.objects for update
+  using (bucket_id = 'sale-images')
+  with check (bucket_id = 'sale-images');
+
+create policy "Borrado público imágenes de ventas"
+  on storage.objects for delete
+  using (bucket_id = 'sale-images');
 
 -- ─────────────────────────────────────────
 --  FIN DEL SCRIPT

@@ -1,13 +1,22 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ChevronDown,
   ChevronRight,
   Trash2,
   RefreshCw,
+  Phone,
+  MapPin,
+  Calendar,
+  Wallet,
+  ImageOff,
+  Banknote,
+  Check,
+  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { ProfitValue } from "@/components/ProfitGate";
 
 /* =====================
    TYPES
@@ -18,17 +27,17 @@ type SaleItem = {
   unit_price: number;
   unit_cost: number;
   product_name: string;
-  
+  image_url: string | null;
 };
-
-
 
 type Sale = {
   id: string;
   customer_name: string;
   customer_phone: string | null;
-  total: number;       // 🔒 ya no nullable
-  dtf_cost: number;    // 🔒 ya no nullable
+  customer_address: string | null;
+  total: number;
+  dtf_cost: number;
+  advance_payment: number;
   status: "pendiente" | "enviado";
   created_at: string;
   sale_items: SaleItem[];
@@ -43,6 +52,9 @@ export default function VentasPage() {
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState<string[]>([]);
 
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState<number | "">("");
+
   /* =====================
      LOAD SALES
   ===================== */
@@ -56,18 +68,20 @@ export default function VentasPage() {
         id,
         customer_name,
         customer_phone,
+        customer_address,
         total,
         dtf_cost,
+        advance_payment,
         status,
         created_at,
         sale_items (
-  id,
-  qty,
-  unit_price,
-  unit_cost,
-  product_name
-)
-
+          id,
+          qty,
+          unit_price,
+          unit_cost,
+          product_name,
+          image_url
+        )
       `)
       .order("created_at", { ascending: false });
 
@@ -97,6 +111,10 @@ export default function VentasPage() {
     return sale.total - costos - sale.dtf_cost;
   }
 
+  function getSaldoPendiente(sale: Sale) {
+    return Math.max(sale.total - (sale.advance_payment || 0), 0);
+  }
+
   /* =====================
      CHANGE STATUS
   ===================== */
@@ -118,6 +136,43 @@ export default function VentasPage() {
   }
 
   /* =====================
+     REGISTRAR PAGO (anticipo -> completar saldo)
+  ===================== */
+
+  function startPayment(sale: Sale) {
+    setPayingId(sale.id);
+    setPayAmount(getSaldoPendiente(sale));
+  }
+
+  function cancelPayment() {
+    setPayingId(null);
+    setPayAmount("");
+  }
+
+  async function confirmPayment(sale: Sale) {
+    const amount = Number(payAmount);
+    if (!amount || amount <= 0) {
+      alert("Ingresa un monto válido");
+      return;
+    }
+
+    const nuevoAnticipo = Math.min(sale.total, (sale.advance_payment || 0) + amount);
+
+    const { error } = await supabase
+      .from("sales")
+      .update({ advance_payment: nuevoAnticipo })
+      .eq("id", sale.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    cancelPayment();
+    loadSales();
+  }
+
+  /* =====================
      DELETE SALE
   ===================== */
 
@@ -133,151 +188,287 @@ export default function VentasPage() {
     loadSales();
   }
 
+  function toggleOpen(id: string) {
+    setOpenRows((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
   /* =====================
      UI
   ===================== */
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">
-        Ventas (Libro Diario)
-      </h1>
+    <div className="space-y-6 pb-24">
+      <h1 className="text-2xl font-semibold">Ventas (Libro Diario)</h1>
 
-      <div className="card p-0 overflow-x-auto">
-        {loading ? (
-          <p className="p-4">Cargando…</p>
-        ) : (
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="p-3 w-8"></th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3">Cliente</th>
-                <th className="p-3 text-right">Total</th>
-                <th className="p-3 text-right">Ganancia</th>
-                <th className="p-3 text-center">Estado</th>
-                <th className="p-3 text-center">Acciones</th>
-              </tr>
-            </thead>
+      {loading ? (
+        <div className="card p-6 text-sm text-muted">Cargando…</div>
+      ) : sales.length === 0 ? (
+        <div className="card p-6 text-center text-sm text-muted">
+          No hay ventas registradas
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sales.map((s) => {
+            const open = openRows.includes(s.id);
+            const profit = getProfit(s);
+            const saldo = getSaldoPendiente(s);
+            const tieneAnticipo = (s.advance_payment || 0) > 0;
 
-            <tbody>
-              {sales.map((s) => {
-                const open = openRows.includes(s.id);
-                const profit = getProfit(s);
+            return (
+              <div key={s.id} className="card p-3 sm:p-4 space-y-2.5">
+                {/* HEADER: fecha / cliente / estado */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                      <Calendar size={12} />
+                      {new Date(s.created_at).toLocaleDateString("es-GT", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </div>
 
-             return (
-  <Fragment key={s.id}>
-    <tr className="border-t">
-      <td className="p-3">
-        <button
-          onClick={() =>
-            setOpenRows((prev) =>
-              prev.includes(s.id)
-                ? prev.filter((i) => i !== s.id)
-                : [...prev, s.id]
-            )
-          }
-        >
-          {open ? (
-            <ChevronDown size={16} />
-          ) : (
-            <ChevronRight size={16} />
-          )}
-        </button>
-      </td>
+                    <div className="font-semibold text-base truncate leading-tight">
+                      {s.customer_name}
+                    </div>
 
-      <td className="p-3">
-        {new Date(s.created_at).toLocaleDateString()}
-      </td>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                      {s.customer_phone && (
+                        <div className="flex items-center gap-1 text-xs text-muted">
+                          <Phone size={12} />
+                          <span className="truncate">{s.customer_phone}</span>
+                        </div>
+                      )}
+                      {s.customer_address && (
+                        <div className="flex items-center gap-1 text-xs text-muted">
+                          <MapPin size={12} />
+                          <span className="truncate">{s.customer_address}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-      <td className="p-3">{s.customer_name}</td>
-
-      <td className="p-3 text-right">
-        Q{s.total.toFixed(2)}
-      </td>
-
-      <td
-        className={`p-3 text-right font-medium ${
-          profit >= 0 ? "text-green-600" : "text-red-600"
-        }`}
-      >
-        Q{profit.toFixed(2)}
-      </td>
-
-      <td className="p-3 text-center">
-        <button
-          onClick={() => toggleStatus(s)}
-          className={`px-2 py-1 rounded text-xs ${
-            s.status === "enviado"
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700"
-          }`}
-        >
-          {s.status}
-        </button>
-      </td>
-
-      <td className="p-3 text-center">
-        <button
-          onClick={() => toggleStatus(s)}
-          title="Cambiar estado"
-          className="text-blue-500 hover:text-blue-700 mr-3"
-        >
-          <RefreshCw size={16} />
-        </button>
-
-        <button
-          onClick={() => deleteSale(s.id)}
-          title="Eliminar venta"
-          className="text-red-500 hover:text-red-700"
-        >
-          <Trash2 size={16} />
-        </button>
-      </td>
-    </tr>
-
-    {open && (
-      <tr className="bg-base-200/40">
-        <td colSpan={7} className="p-3">
-          <ul className="space-y-1">
-            {s.sale_items.map((i) => (
-              <li key={i.id}>
-                {i.qty} ×{" "}
-                <span className="font-medium">
-                  {i.product_name}
-                </span>{" "}
-                — Q{(i.qty * i.unit_price).toFixed(2)}
-              </li>
-            ))}
-
-            {s.dtf_cost > 0 && (
-              <li className="text-xs opacity-70">
-                Costo DTF: − Q{s.dtf_cost.toFixed(2)}
-              </li>
-            )}
-          </ul>
-        </td>
-      </tr>
-    )}
-  </Fragment>
-);
-
-              })}
-
-              {sales.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="p-6 text-center opacity-60"
+                  <button
+                    onClick={() => toggleStatus(s)}
+                    title="Cambiar estado"
+                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
+                      s.status === "enviado"
+                        ? "bg-green-500/15 text-green-600"
+                        : "bg-yellow-500/15 text-yellow-600"
+                    }`}
                   >
-                    No hay ventas registradas
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+                    {s.status === "enviado" ? "Enviado" : "Pendiente"}
+                  </button>
+                </div>
+
+                {/* RESUMEN FINANCIERO */}
+                <div
+                  className={`grid gap-1.5 text-sm ${
+                    tieneAnticipo ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"
+                  }`}
+                >
+                  <Stat label="Total" value={`Q${s.total.toFixed(2)}`} />
+
+                  {tieneAnticipo && (
+                    <>
+                      <Stat
+                        label="Anticipo"
+                        value={`Q${s.advance_payment.toFixed(2)}`}
+                        icon={<Wallet size={12} />}
+                      />
+                      <Stat
+                        label="Saldo pendiente"
+                        value={`Q${saldo.toFixed(2)}`}
+                        accent
+                      />
+                    </>
+                  )}
+
+                  <Stat
+                    label="Ganancia"
+                    value={`Q${profit.toFixed(2)}`}
+                    positive={profit >= 0}
+                    negative={profit < 0}
+                    gated
+                  />
+                </div>
+
+                {/* REGISTRAR PAGO (saldo pendiente -> completar) */}
+                {saldo > 0 && (
+                  <div className="card-soft px-3 py-2">
+                    {payingId === s.id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted shrink-0">Monto recibido</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={saldo}
+                          step="0.01"
+                          autoFocus
+                          className="input input-bordered w-28 py-1.5 text-sm"
+                          value={payAmount}
+                          onChange={(e) =>
+                            setPayAmount(e.target.value === "" ? "" : Number(e.target.value))
+                          }
+                        />
+                        <button
+                          onClick={() => confirmPayment(s)}
+                          className="btn btn-primary btn-sm flex items-center gap-1 px-3 py-1.5"
+                        >
+                          <Check size={14} />
+                          Confirmar
+                        </button>
+                        <button
+                          onClick={cancelPayment}
+                          className="btn btn-ghost btn-sm flex items-center gap-1 px-2 py-1.5 text-muted"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startPayment(s)}
+                        className="flex items-center gap-1.5 text-sm font-medium text-accent"
+                      >
+                        <Banknote size={15} />
+                        Registrar pago de saldo
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* TOGGLE DETALLE */}
+                <button
+                  onClick={() => toggleOpen(s.id)}
+                  className="flex items-center gap-1.5 text-sm text-muted hover:text-accent transition"
+                >
+                  {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {open ? "Ocultar detalle" : "Ver detalle"}
+                  <span className="opacity-60">
+                    · {s.sale_items.length}{" "}
+                    {s.sale_items.length === 1 ? "producto" : "productos"}
+                  </span>
+                </button>
+
+                {/* DETALLE: productos + imágenes */}
+                {open && (
+                  <div
+                    className="space-y-2.5 pt-2.5 border-t"
+                    style={{ borderColor: "rgb(var(--border))" }}
+                  >
+                    {s.sale_items.map((i) => (
+                      <div key={i.id} className="flex items-center gap-3">
+                        {i.image_url ? (
+                          <a
+                            href={i.image_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0"
+                            title="Ver diseño en tamaño completo"
+                          >
+                            <img
+                              src={i.image_url}
+                              alt={i.product_name}
+                              className="w-24 h-24 rounded-xl object-cover border hover:opacity-90 transition"
+                              style={{ borderColor: "rgb(var(--border))" }}
+                            />
+                          </a>
+                        ) : (
+                          <div
+                            className="w-24 h-24 rounded-xl border border-dashed flex items-center justify-center text-muted shrink-0"
+                            style={{ borderColor: "rgb(var(--border))" }}
+                          >
+                            <ImageOff size={20} />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium truncate">
+                            {i.product_name}
+                          </div>
+                          <div className="text-xs text-muted">
+                            {i.qty} × Q{i.unit_price.toFixed(2)} = Q
+                            {(i.qty * i.unit_price).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {s.dtf_cost > 0 && (
+                      <div className="text-xs text-muted">
+                        Costo DTF: − Q{s.dtf_cost.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ACCIONES */}
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => toggleStatus(s)}
+                    className="btn btn-ghost btn-sm flex items-center gap-1.5 text-blue-500 hover:text-blue-600"
+                  >
+                    <RefreshCw size={14} />
+                    Cambiar estado
+                  </button>
+
+                  <button
+                    onClick={() => deleteSale(s.id)}
+                    className="btn btn-ghost btn-sm flex items-center gap-1.5 text-red-500 hover:text-red-600"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =====================
+   STAT (resumen financiero)
+===================== */
+
+function Stat({
+  label,
+  value,
+  icon,
+  accent,
+  positive,
+  negative,
+  gated,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  accent?: boolean;
+  positive?: boolean;
+  negative?: boolean;
+  gated?: boolean;
+}) {
+  const cls = `font-semibold ${
+    accent
+      ? "text-accent"
+      : positive
+      ? "text-green-600"
+      : negative
+      ? "text-red-600"
+      : ""
+  }`;
+
+  return (
+    <div className="card-soft px-3 py-2">
+      <div className="flex items-center gap-1.5 text-[11px] text-muted">
+        {icon}
+        {label}
       </div>
+      {gated ? <ProfitValue value={value} className={cls} /> : <div className={cls}>{value}</div>}
     </div>
   );
 }

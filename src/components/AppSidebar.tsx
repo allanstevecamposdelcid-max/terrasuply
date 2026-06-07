@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Wallet,
-  BarChart3,
   Boxes,
   Plus,
   Truck,
@@ -20,7 +19,6 @@ const navItems = [
   { href: "/ventas/nueva", label: "Nueva venta", icon: Plus },
   { href: "/inventario", label: "Inventario", icon: Boxes },
   { href: "/caja", label: "Caja", icon: Wallet },
-  { href: "/graficas", label: "Gráficas", icon: BarChart3 },
   {
     href: "https://trackingt.github.io/order-tracking/admin.html",
     label: "Seguimiento pedidos",

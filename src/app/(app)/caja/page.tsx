@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { ProfitValue } from "@/components/ProfitGate";
 
 /* =====================
    TYPES
@@ -216,6 +217,7 @@ export default function CajaPage() {
               ? "text-green-500"
               : "text-red-500"
           }
+          gated
         />
       </div>
 
@@ -315,11 +317,13 @@ function Resumen({
   value,
   icon,
   color,
+  gated,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   color: string;
+  gated?: boolean;
 }) {
   return (
     <div className="card p-5">
@@ -327,9 +331,13 @@ function Resumen({
         {icon}
         <span>{label}</span>
       </div>
-      <p className={`text-2xl font-semibold ${color}`}>
-        Q{value.toFixed(2)}
-      </p>
+      {gated ? (
+        <ProfitValue value={`Q${value.toFixed(2)}`} className={`text-2xl font-semibold ${color}`} />
+      ) : (
+        <p className={`text-2xl font-semibold ${color}`}>
+          Q{value.toFixed(2)}
+        </p>
+      )}
     </div>
   );
 }

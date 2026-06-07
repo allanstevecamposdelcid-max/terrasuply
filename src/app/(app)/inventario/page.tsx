@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  Search,
+  Plus,
+  Pencil,
+  Trash2,
+  Tag,
+  DollarSign,
+  Package,
+  Boxes,
+} from "lucide-react";
 
 /* =====================
    TYPES
@@ -87,9 +97,15 @@ export default function InventarioPage() {
   }
 
   return (
-    <div className="p-4 pb-24">
+    <div className="space-y-6 pb-28">
+      <div>
+        <h1 className="text-2xl font-semibold">Inventario</h1>
+        <p className="text-sm text-muted">Productos disponibles para la venta</p>
+      </div>
+
       {/* SEARCH */}
-      <div className="mb-4">
+      <div className="flex items-center gap-2 max-w-sm">
+        <Search size={16} className="text-muted shrink-0" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -98,70 +114,75 @@ export default function InventarioPage() {
         />
       </div>
 
-      {loading && <div className="text-sm opacity-70">Cargando...</div>}
+      {loading && <div className="text-sm text-muted">Cargando…</div>}
 
       {/* LIST */}
-      <div className="space-y-3">
-        {items.map((p) => (
-          <div key={p.id} className="card bg-base-100 shadow">
-            <div className="card-body space-y-2">
-              <div className="flex justify-between items-start gap-3">
-                <div>
-                  <div className="font-semibold">{p.name}</div>
+      {!loading && items.length === 0 ? (
+        <div className="card p-6 text-center text-sm text-muted">
+          No hay productos registrados
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {items.map((p) => (
+            <div key={p.id} className="card p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{p.name}</div>
                   {p.sku && (
-                    <div className="text-xs opacity-70">
-                      Código: {p.sku}
+                    <div className="flex items-center gap-1 text-xs text-muted mt-0.5">
+                      <Tag size={12} />
+                      <span className="truncate">{p.sku}</span>
                     </div>
                   )}
                 </div>
 
                 <span
-                  className={`badge ${
-                    p.stock <= 0 ? "badge-error" : "badge-success"
+                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
+                    p.stock <= 0
+                      ? "bg-red-500/15 text-red-600"
+                      : "bg-green-500/15 text-green-600"
                   }`}
                 >
-                  {p.stock <= 0
-                    ? "No disponible"
-                    : `${p.stock} disponibles`}
+                  {p.stock <= 0 ? "Agotado" : `${p.stock} disponibles`}
                 </span>
               </div>
 
-              <div className="text-sm">
-                <div>Precio: Q{p.price.toFixed(2)}</div>
-                <div className="opacity-70">
-                  Costo: Q{p.cost.toFixed(2)}
-                </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <Info label="Precio" value={`Q${p.price.toFixed(2)}`} accent />
+                <Info label="Costo" value={`Q${p.cost.toFixed(2)}`} />
               </div>
 
-              {/* ACTIONS */}
-              <div className="flex gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-1">
                 <button
-                  className="btn btn-ghost btn-sm"
                   onClick={() => {
                     setEditing(p);
                     setOpenEdit(true);
                   }}
+                  className="btn btn-ghost btn-sm flex items-center gap-1.5 text-blue-500 hover:text-blue-600"
                 >
+                  <Pencil size={14} />
                   Editar
                 </button>
 
                 <button
-                  className="btn btn-ghost btn-sm text-error"
                   onClick={() => deleteProduct(p.id)}
+                  className="btn btn-ghost btn-sm flex items-center gap-1.5 text-red-500 hover:text-red-600"
                 >
+                  <Trash2 size={14} />
                   Eliminar
                 </button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* CREATE */}
       <button
-        className="btn btn-primary fixed left-4 right-4 bottom-5"
+        className="btn btn-primary fixed left-4 right-4 bottom-[84px] md:left-auto md:right-8 md:bottom-8 md:w-auto md:px-6 flex items-center justify-center gap-2 shadow-lg"
         onClick={() => setOpenCreate(true)}
       >
+        <Plus size={16} />
         Crear producto
       </button>
 
@@ -189,6 +210,27 @@ export default function InventarioPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/* =====================
+   INFO (precio / costo)
+===================== */
+
+function Info({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="card-soft px-3 py-2">
+      <div className="text-[11px] text-muted">{label}</div>
+      <div className={`font-semibold ${accent ? "text-accent" : ""}`}>{value}</div>
     </div>
   );
 }
@@ -255,11 +297,7 @@ function CreateProductModal({
         setPrice={setPrice}
       />
 
-      <ModalActions
-        onClose={onClose}
-        onSave={save}
-        saving={saving}
-      />
+      <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
 }
@@ -305,73 +343,23 @@ function EditProductModal({
 
   return (
     <Modal title="Editar producto" onClose={onClose}>
-      <div className="space-y-5">
-        {/* IDENTIDAD */}
-        <div className="space-y-2">
-          <div>
-            <label className="text-sm font-medium">Nombre</label>
-            <input
-              className="input input-bordered w-full"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Código (SKU)</label>
-            <input
-              className="input input-bordered w-full"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* STOCK + PRECIOS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="text-sm font-medium">Stock</label>
-            <input
-              type="number"
-              className="input input-bordered w-full"
-              value={stock}
-              onChange={(e) =>
-                setStock(e.target.value === "" ? "" : Number(e.target.value))
-              }
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Costo</label>
-            <input
-              type="number"
-              className="input input-bordered w-full"
-              value={cost}
-              onChange={(e) =>
-                setCost(e.target.value === "" ? "" : Number(e.target.value))
-              }
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Precio</label>
-            <input
-              type="number"
-              className="input input-bordered w-full"
-              value={price}
-              onChange={(e) =>
-                setPrice(e.target.value === "" ? "" : Number(e.target.value))
-              }
-            />
-          </div>
-        </div>
-      </div>
+      <ProductForm
+        name={name}
+        setName={setName}
+        sku={sku}
+        setSku={setSku}
+        stock={stock}
+        setStock={setStock}
+        cost={cost}
+        setCost={setCost}
+        price={price}
+        setPrice={setPrice}
+      />
 
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
 }
-
 
 /* =====================
    SHARED UI
@@ -387,11 +375,15 @@ function Modal({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-base-100 w-full sm:max-w-md rounded-2xl p-4">
-        <div className="font-semibold text-lg mb-3">
-          {title}
-        </div>
+    <div
+      className="fixed inset-0 z-[60] bg-black/40 flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="card w-full sm:max-w-md p-5 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="font-semibold text-lg">{title}</div>
         {children}
       </div>
     </div>
@@ -408,20 +400,18 @@ function ModalActions({
   saving: boolean;
 }) {
   return (
-    <div className="flex gap-2 mt-4">
-      <button className="btn btn-ghost w-1/2" onClick={onClose}>
+    <div className="flex gap-2 pt-1">
+      <button className="btn btn-ghost flex-1" onClick={onClose}>
         Cancelar
       </button>
-      <button
-        className="btn btn-primary w-1/2"
-        onClick={onSave}
-        disabled={saving}
-      >
+      <button className="btn btn-primary flex-1" onClick={onSave} disabled={saving}>
         {saving ? "Guardando..." : "Guardar"}
       </button>
     </div>
   );
 }
+
+type NumField = number | "";
 
 function ProductForm({
   name,
@@ -434,64 +424,86 @@ function ProductForm({
   setCost,
   price,
   setPrice,
-}: any) {
+}: {
+  name: string;
+  setName: (v: string) => void;
+  sku: string;
+  setSku: (v: string) => void;
+  stock: NumField;
+  setStock: (v: NumField) => void;
+  cost: NumField;
+  setCost: (v: NumField) => void;
+  price: NumField;
+  setPrice: (v: NumField) => void;
+}) {
+  function asNumber(raw: string): NumField {
+    return raw === "" ? "" : Number(raw);
+  }
+
   return (
-    <div className="space-y-2">
-      <input
-        className="input input-bordered w-full"
-        placeholder="Nombre"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+    <div className="space-y-3">
+      <div className="flex gap-2 items-center">
+        <Package size={16} className="text-muted shrink-0" />
+        <input
+          className="input input-bordered w-full"
+          placeholder="Nombre"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
-      <input
-        className="input input-bordered w-full"
-        placeholder="Código (SKU)"
-        value={sku}
-        onChange={(e) => setSku(e.target.value)}
-      />
+      <div className="flex gap-2 items-center">
+        <Tag size={16} className="text-muted shrink-0" />
+        <input
+          className="input input-bordered w-full"
+          placeholder="Código (SKU)"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+        />
+      </div>
 
-      <input
-        type="number"
-        className="input input-bordered w-full"
-        placeholder="Stock"
-        value={stock}
-        onChange={(e) =>
-          setStock(
-            e.target.value === ""
-              ? ""
-              : Number(e.target.value)
-          )
-        }
-      />
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1">
+          <label className="flex items-center gap-1 text-xs text-muted">
+            <Boxes size={12} /> Stock
+          </label>
+          <input
+            type="number"
+            min={0}
+            className="input input-bordered w-full"
+            value={stock}
+            onChange={(e) => setStock(asNumber(e.target.value))}
+          />
+        </div>
 
-      <input
-        type="number"
-        className="input input-bordered w-full"
-        placeholder="Costo"
-        value={cost}
-        onChange={(e) =>
-          setCost(
-            e.target.value === ""
-              ? ""
-              : Number(e.target.value)
-          )
-        }
-      />
+        <div className="space-y-1">
+          <label className="flex items-center gap-1 text-xs text-muted">
+            <DollarSign size={12} /> Costo
+          </label>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className="input input-bordered w-full"
+            value={cost}
+            onChange={(e) => setCost(asNumber(e.target.value))}
+          />
+        </div>
 
-      <input
-        type="number"
-        className="input input-bordered w-full"
-        placeholder="Precio"
-        value={price}
-        onChange={(e) =>
-          setPrice(
-            e.target.value === ""
-              ? ""
-              : Number(e.target.value)
-          )
-        }
-      />
+        <div className="space-y-1">
+          <label className="flex items-center gap-1 text-xs text-muted">
+            <DollarSign size={12} /> Precio
+          </label>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className="input input-bordered w-full"
+            value={price}
+            onChange={(e) => setPrice(asNumber(e.target.value))}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { User, Phone, Package, Save, DollarSign, Trash2 } from "lucide-react";
+import {
+  User,
+  Phone,
+  MapPin,
+  Package,
+  Save,
+  DollarSign,
+  Wallet,
+  Trash2,
+  ImagePlus,
+  X,
+  Loader2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 /* =====================
@@ -21,7 +33,11 @@ type CartItem = {
   product: Product;
   qty: number;
   unit_price: number; // ✅ precio editable solo en esta venta
+  image_url: string | null; // ✅ imagen del producto a vender (URL pública)
+  uploading: boolean;
 };
+
+const SALE_IMAGES_BUCKET = "sale-images";
 
 export default function NuevaVentaPage() {
   const router = useRouter();
@@ -35,8 +51,10 @@ export default function NuevaVentaPage() {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
 
   const [dtfCost, setDtfCost] = useState(0);
+  const [advancePayment, setAdvancePayment] = useState(0);
   const [loading, setLoading] = useState(false);
 
   async function loadProducts(q = "") {
@@ -83,7 +101,10 @@ export default function NuevaVentaPage() {
           i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i
         );
       }
-      return [...prev, { product, qty: 1, unit_price: product.price }];
+      return [
+        ...prev,
+        { product, qty: 1, unit_price: product.price, image_url: null, uploading: false },
+      ];
     });
 
     setSearch("");
@@ -116,11 +137,58 @@ export default function NuevaVentaPage() {
     setCart((prev) => prev.filter((i) => i.product.id !== productId));
   }
 
+  /* =====================
+     IMAGEN DEL PRODUCTO (se sube a Supabase Storage
+     y se guarda la URL pública resultante)
+  ===================== */
+
+  async function uploadItemImage(productId: string, path: string, file: File) {
+    setCart((prev) =>
+      prev.map((i) => (i.product.id === productId ? { ...i, uploading: true } : i))
+    );
+
+    const { error: uploadError } = await supabase.storage
+      .from(SALE_IMAGES_BUCKET)
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+
+    if (uploadError) {
+      alert(uploadError.message);
+      setCart((prev) =>
+        prev.map((i) => (i.product.id === productId ? { ...i, uploading: false } : i))
+      );
+      return;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(SALE_IMAGES_BUCKET).getPublicUrl(path);
+
+    setCart((prev) =>
+      prev.map((i) =>
+        i.product.id === productId
+          ? { ...i, image_url: publicUrl, uploading: false }
+          : i
+      )
+    );
+  }
+
+  function removeItemImage(productId: string) {
+    setCart((prev) =>
+      prev.map((i) => (i.product.id === productId ? { ...i, image_url: null } : i))
+    );
+  }
+
   const total = cart.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
+  const saldoPendiente = Math.max(total - (advancePayment || 0), 0);
 
   async function saveSale() {
     if (!customerName || cart.length === 0) {
       alert("Agrega cliente y productos");
+      return;
+    }
+
+    if (cart.some((i) => i.uploading)) {
+      alert("Espera a que terminen de subirse las imágenes");
       return;
     }
 
@@ -132,13 +200,16 @@ export default function NuevaVentaPage() {
       qty: i.qty,
       unit_price: i.unit_price, // ✅ usa el precio editado
       unit_cost: i.product.cost,
+      image_url: i.image_url,
     }));
 
     const { error } = await supabase.rpc("create_sale_multi", {
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
+      p_customer_address: customerAddress || null,
       p_items: items,
       p_dtf_cost: dtfCost,
+      p_advance_payment: advancePayment || 0,
     });
 
     setLoading(false);
@@ -177,6 +248,16 @@ export default function NuevaVentaPage() {
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Teléfono (opcional)"
+            />
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <MapPin size={16} />
+            <input
+              className="input input-bordered w-full"
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              placeholder="Dirección (opcional)"
             />
           </div>
         </div>
@@ -224,72 +305,179 @@ export default function NuevaVentaPage() {
 
         {/* CARRITO */}
         {cart.length > 0 && (
-          <div className="space-y-2">
-            {cart.map((i) => (
-              <div
-                key={i.product.id}
-                className="flex items-center gap-2 border rounded-lg p-2"
-              >
-                <div className="flex-1">
-                  <div className="font-medium">{i.product.name}</div>
-                  <div className="text-xs opacity-60">
-                    Precio original: Q{i.product.price}
+          <div className="space-y-3">
+            {cart.map((i) => {
+              const inputId = `sale-image-${i.product.id}`;
+              return (
+                <div
+                  key={i.product.id}
+                  className="card-soft p-3 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{i.product.name}</div>
+                      <div className="text-xs opacity-60">
+                        Precio original: Q{i.product.price}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => removeItem(i.product.id)}
+                      className="btn btn-ghost btn-sm text-red-500"
+                      title="Quitar producto"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* IMAGEN DEL PRODUCTO A VENDER (diseño de la playera) */}
+                    <div className="shrink-0">
+                      {i.image_url ? (
+                        <div className="relative w-28 h-28 sm:w-32 sm:h-32">
+                          <img
+                            src={i.image_url}
+                            alt={i.product.name}
+                            className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover border"
+                            style={{ borderColor: "rgb(var(--border))" }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeItemImage(i.product.id)}
+                            title="Quitar imagen"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label
+                          htmlFor={inputId}
+                          className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1.5 text-muted text-xs text-center cursor-pointer hover:border-accent hover:text-accent transition"
+                          style={{ borderColor: "rgb(var(--border))" }}
+                        >
+                          {i.uploading ? (
+                            <Loader2 size={20} className="animate-spin" />
+                          ) : (
+                            <>
+                              <ImagePlus size={20} />
+                              <span>Foto del diseño</span>
+                            </>
+                          )}
+                        </label>
+                      )}
+                      <input
+                        id={inputId}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={i.uploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+                            const path = `${Date.now()}-${i.product.id}.${ext}`;
+                            uploadItemImage(i.product.id, path, file);
+                          }
+                          e.target.value = "";
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex-1 flex flex-col gap-2">
+                      <div>
+                        <label className="text-xs text-muted">Precio (esta venta)</label>
+                        {/* ✅ PRECIO EDITABLE SOLO PARA ESTA VENTA */}
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className="input input-bordered w-full"
+                          value={i.unit_price}
+                          onChange={(e) =>
+                            updateUnitPrice(i.product.id, Number(e.target.value))
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-muted">Cantidad</label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="input input-bordered w-full"
+                          value={i.qty}
+                          onChange={(e) => updateQty(i.product.id, Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* ✅ PRECIO EDITABLE SOLO PARA ESTA VENTA */}
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  className="input input-bordered w-28"
-                  value={i.unit_price}
-                  onChange={(e) =>
-                    updateUnitPrice(i.product.id, Number(e.target.value))
-                  }
-                />
-
-                <input
-                  type="number"
-                  min={1}
-                  className="input input-bordered w-20"
-                  value={i.qty}
-                  onChange={(e) => updateQty(i.product.id, Number(e.target.value))}
-                />
-
-                <button
-                  onClick={() => removeItem(i.product.id)}
-                  className="btn btn-ghost btn-sm text-error"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* DTF */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Costo DTF (no afecta el total)
-          </label>
-          <div className="flex gap-2 items-center">
-            <DollarSign size={16} />
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="input input-bordered w-full"
-              value={dtfCost}
-              onChange={(e) => setDtfCost(Number(e.target.value))}
-            />
+        {/* DTF + ANTICIPO */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Costo DTF (no afecta el total)
+            </label>
+            <div className="flex gap-2 items-center">
+              <DollarSign size={16} />
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="input input-bordered w-full"
+                value={dtfCost}
+                onChange={(e) => setDtfCost(Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Anticipo recibido
+            </label>
+            <div className="flex gap-2 items-center">
+              <Wallet size={16} />
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="input input-bordered w-full"
+                value={advancePayment}
+                onChange={(e) => setAdvancePayment(Number(e.target.value))}
+                placeholder="Q0.00"
+              />
+            </div>
+            <p className="text-xs text-muted">
+              Si el cliente no paga el total, registra aquí el adelanto entregado.
+            </p>
           </div>
         </div>
 
         {/* TOTAL */}
-        <div className="flex justify-between text-lg font-semibold">
-          <span>Total</span>
-          <span>Q{total.toFixed(2)}</span>
+        <div className="space-y-1 border-t pt-4" style={{ borderColor: "rgb(var(--border))" }}>
+          <div className="flex justify-between text-lg font-semibold">
+            <span>Total</span>
+            <span>Q{total.toFixed(2)}</span>
+          </div>
+
+          {advancePayment > 0 && (
+            <>
+              <div className="flex justify-between text-sm text-muted">
+                <span>Anticipo</span>
+                <span>− Q{Number(advancePayment).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-semibold text-accent">
+                <span>Saldo pendiente</span>
+                <span>Q{saldoPendiente.toFixed(2)}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* SAVE */}
