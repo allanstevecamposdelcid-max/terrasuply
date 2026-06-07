@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ChevronDown,
@@ -14,6 +14,9 @@ import {
   Banknote,
   Check,
   X,
+  Search,
+  MessageCircle,
+  AlertCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
@@ -55,6 +58,24 @@ export default function VentasPage() {
 
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState<number | "">("");
+
+  /* =====================
+     BÚSQUEDA Y FILTROS
+  ===================== */
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todas" | "pendiente" | "enviado">("todas");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const hayFiltrosActivos = Boolean(search || statusFilter !== "todas" || from || to);
+
+  function limpiarFiltros() {
+    setSearch("");
+    setStatusFilter("todas");
+    setFrom("");
+    setTo("");
+  }
 
   /* =====================
      LOAD SALES
@@ -115,6 +136,48 @@ export default function VentasPage() {
 
   function getSaldoPendiente(sale: Sale) {
     return Math.max(sale.total - (sale.advance_payment || 0), 0);
+  }
+
+  /* =====================
+     LISTA FILTRADA
+  ===================== */
+
+  const salesFiltradas = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return sales.filter((s) => {
+      if (q && !s.customer_name.toLowerCase().includes(q)) return false;
+      if (statusFilter !== "todas" && s.status !== statusFilter) return false;
+
+      const d = s.created_at.slice(0, 10);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+
+      return true;
+    });
+  }, [sales, search, statusFilter, from, to]);
+
+  /* =====================
+     RECORDATORIO: SALDOS PENDIENTES
+  ===================== */
+
+  const saldosPendientes = useMemo(() => {
+    return sales
+      .map((s) => ({ sale: s, saldo: getSaldoPendiente(s) }))
+      .filter((x) => x.saldo > 0)
+      .sort((a, b) => b.saldo - a.saldo);
+  }, [sales]);
+
+  function whatsappLink(sale: Sale, saldo: number) {
+    const digits = (sale.customer_phone || "").replace(/\D/g, "");
+    if (!digits) return null;
+
+    const phone = digits.length === 8 ? `502${digits}` : digits;
+    const mensaje = `Hola ${sale.customer_name}, te escribimos de Terra Suply para recordarte que tienes un saldo pendiente de Q${saldo.toFixed(
+      2
+    )} por tu pedido. ¡Gracias por tu preferencia! 🙌`;
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
   }
 
   /* =====================
@@ -204,15 +267,122 @@ export default function VentasPage() {
     <div className="space-y-6 pb-24">
       <h1 className="text-2xl font-semibold">Ventas (Libro Diario)</h1>
 
+      {/* RECORDATORIO: SALDOS PENDIENTES */}
+      {saldosPendientes.length > 0 && (
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <AlertCircle size={16} className="text-yellow-500" />
+            Clientes con saldo pendiente
+            <span className="text-xs font-normal text-muted">
+              ({saldosPendientes.length})
+            </span>
+          </div>
+
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {saldosPendientes.map(({ sale, saldo }) => {
+              const link = whatsappLink(sale, saldo);
+              return (
+                <div
+                  key={sale.id}
+                  className="card-soft px-3 py-2 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {sale.customer_name}
+                    </div>
+                    <div className="text-xs text-muted">
+                      Debe Q{saldo.toFixed(2)} de Q{sale.total.toFixed(2)}
+                    </div>
+                  </div>
+
+                  {link ? (
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-ghost btn-sm flex items-center gap-1.5 text-green-600 hover:text-green-700 shrink-0"
+                    >
+                      <MessageCircle size={14} />
+                      Cobrar
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted shrink-0">Sin teléfono</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* BÚSQUEDA Y FILTROS */}
+      <div className="card p-4 flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[200px] space-y-1">
+          <label className="text-xs text-muted">Buscar cliente</label>
+          <div className="flex items-center gap-2">
+            <Search size={16} className="text-muted shrink-0" />
+            <input
+              className="input input-bordered w-full"
+              placeholder="Nombre del cliente"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted">Estado</label>
+          <select
+            className="input input-bordered"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          >
+            <option value="todas">Todas</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="enviado">Enviado</option>
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted">Desde</label>
+          <input
+            type="date"
+            className="input input-bordered"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted">Hasta</label>
+          <input
+            type="date"
+            className="input input-bordered"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </div>
+
+        {hayFiltrosActivos && (
+          <button onClick={limpiarFiltros} className="btn btn-ghost btn-sm text-red-500">
+            Limpiar
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div className="card p-6 text-sm text-muted">Cargando…</div>
       ) : sales.length === 0 ? (
         <div className="card p-6 text-center text-sm text-muted">
           No hay ventas registradas
         </div>
+      ) : salesFiltradas.length === 0 ? (
+        <div className="card p-6 text-center text-sm text-muted">
+          Ninguna venta coincide con los filtros aplicados
+        </div>
       ) : (
         <div className="space-y-3">
-          {sales.map((s) => {
+          {salesFiltradas.map((s) => {
             const open = openRows.includes(s.id);
             const profit = getProfit(s);
             const saldo = getSaldoPendiente(s);

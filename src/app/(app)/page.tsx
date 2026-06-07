@@ -249,19 +249,21 @@ export default function DashboardPage() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Metric
           label="Ventas"
-          value={`Q${totalVentas.toFixed(2)}`}
+          value={<ProfitValue value={`Q${totalVentas.toFixed(2)}`} className="text-3xl font-semibold text-green-400" />}
           icon={<TrendingUp size={18} />}
-          accent
+          raw
         />
         <Metric
           label="Pendiente"
-          value={`Q${pendiente.toFixed(2)}`}
+          value={<ProfitValue value={`Q${pendiente.toFixed(2)}`} className="text-3xl font-semibold" />}
           icon={<Clock size={18} />}
+          raw
         />
         <Metric
           label="Enviado"
-          value={`Q${enviado.toFixed(2)}`}
+          value={<ProfitValue value={`Q${enviado.toFixed(2)}`} className="text-3xl font-semibold" />}
           icon={<CheckCircle size={18} />}
+          raw
         />
         <Metric
           label="Ganancia"
@@ -304,13 +306,11 @@ function Metric({
   icon,
   label,
   value,
-  accent,
   raw,
 }: {
   icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
-  accent?: boolean;
   raw?: boolean;
 }) {
   return (
@@ -319,17 +319,7 @@ function Metric({
         {icon}
         <span>{label}</span>
       </div>
-      {raw ? (
-        value
-      ) : (
-        <div
-          className={`text-3xl font-semibold ${
-            accent ? "text-green-400" : ""
-          }`}
-        >
-          {value}
-        </div>
-      )}
+      {raw ? value : <div className="text-3xl font-semibold">{value}</div>}
     </div>
   );
 }
