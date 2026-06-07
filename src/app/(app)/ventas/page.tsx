@@ -15,7 +15,6 @@ import {
   Check,
   X,
   Search,
-  MessageCircle,
   AlertCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -168,17 +167,7 @@ export default function VentasPage() {
       .sort((a, b) => b.saldo - a.saldo);
   }, [sales]);
 
-  function whatsappLink(sale: Sale, saldo: number) {
-    const digits = (sale.customer_phone || "").replace(/\D/g, "");
-    if (!digits) return null;
-
-    const phone = digits.length === 8 ? `502${digits}` : digits;
-    const mensaje = `Hola ${sale.customer_name}, te escribimos de Terra Suply para recordarte que tienes un saldo pendiente de Q${saldo.toFixed(
-      2
-    )} por tu pedido. ¡Gracias por tu preferencia! 🙌`;
-
-    return `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
-  }
+  const [pendientesOpen, setPendientesOpen] = useState(true);
 
   /* =====================
      CHANGE STATUS
@@ -270,18 +259,21 @@ export default function VentasPage() {
       {/* RECORDATORIO: SALDOS PENDIENTES */}
       {saldosPendientes.length > 0 && (
         <div className="card p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
+          <button
+            onClick={() => setPendientesOpen((v) => !v)}
+            className="flex items-center gap-2 text-sm font-medium w-full"
+          >
+            {pendientesOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             <AlertCircle size={16} className="text-yellow-500" />
             Clientes con saldo pendiente
             <span className="text-xs font-normal text-muted">
               ({saldosPendientes.length})
             </span>
-          </div>
+          </button>
 
-          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-            {saldosPendientes.map(({ sale, saldo }) => {
-              const link = whatsappLink(sale, saldo);
-              return (
+          {pendientesOpen && (
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {saldosPendientes.map(({ sale, saldo }) => (
                 <div
                   key={sale.id}
                   className="card-soft px-3 py-2 flex items-center justify-between gap-3"
@@ -290,28 +282,21 @@ export default function VentasPage() {
                     <div className="text-sm font-medium truncate">
                       {sale.customer_name}
                     </div>
-                    <div className="text-xs text-muted">
-                      Debe Q{saldo.toFixed(2)} de Q{sale.total.toFixed(2)}
-                    </div>
+                    {sale.customer_phone && (
+                      <div className="flex items-center gap-1 text-xs text-muted">
+                        <Phone size={11} />
+                        <span className="truncate">{sale.customer_phone}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {link ? (
-                    <a
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-ghost btn-sm flex items-center gap-1.5 text-green-600 hover:text-green-700 shrink-0"
-                    >
-                      <MessageCircle size={14} />
-                      Cobrar
-                    </a>
-                  ) : (
-                    <span className="text-xs text-muted shrink-0">Sin teléfono</span>
-                  )}
+                  <div className="text-sm font-semibold text-yellow-600 shrink-0">
+                    Q{saldo.toFixed(2)}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
