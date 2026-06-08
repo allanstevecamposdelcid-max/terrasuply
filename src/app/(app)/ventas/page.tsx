@@ -15,7 +15,6 @@ import {
   Check,
   X,
   Search,
-  AlertCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
@@ -157,19 +156,6 @@ export default function VentasPage() {
   }, [sales, search, statusFilter, from, to]);
 
   /* =====================
-     RECORDATORIO: SALDOS PENDIENTES
-  ===================== */
-
-  const saldosPendientes = useMemo(() => {
-    return sales
-      .map((s) => ({ sale: s, saldo: getSaldoPendiente(s) }))
-      .filter((x) => x.saldo > 0)
-      .sort((a, b) => b.saldo - a.saldo);
-  }, [sales]);
-
-  const [pendientesOpen, setPendientesOpen] = useState(true);
-
-  /* =====================
      CHANGE STATUS
   ===================== */
 
@@ -255,50 +241,6 @@ export default function VentasPage() {
   return (
     <div className="space-y-6 pb-24">
       <h1 className="text-2xl font-semibold">Ventas (Libro Diario)</h1>
-
-      {/* RECORDATORIO: SALDOS PENDIENTES */}
-      {saldosPendientes.length > 0 && (
-        <div className="card p-4 space-y-3">
-          <button
-            onClick={() => setPendientesOpen((v) => !v)}
-            className="flex items-center gap-2 text-sm font-medium w-full"
-          >
-            {pendientesOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            <AlertCircle size={16} className="text-yellow-500" />
-            Clientes con saldo pendiente
-            <span className="text-xs font-normal text-muted">
-              ({saldosPendientes.length})
-            </span>
-          </button>
-
-          {pendientesOpen && (
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {saldosPendientes.map(({ sale, saldo }) => (
-                <div
-                  key={sale.id}
-                  className="card-soft px-3 py-2 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {sale.customer_name}
-                    </div>
-                    {sale.customer_phone && (
-                      <div className="flex items-center gap-1 text-xs text-muted">
-                        <Phone size={11} />
-                        <span className="truncate">{sale.customer_phone}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-sm font-semibold text-yellow-600 shrink-0">
-                    Q{saldo.toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* BÚSQUEDA Y FILTROS */}
       <div className="card p-4 flex flex-wrap gap-3 items-end">
