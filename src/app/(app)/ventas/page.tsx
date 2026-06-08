@@ -53,6 +53,7 @@ export default function VentasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [openRows, setOpenRows] = useState<string[]>([]);
+  const [openDescriptions, setOpenDescriptions] = useState<string[]>([]);
 
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState<number | "">("");
@@ -234,6 +235,12 @@ export default function VentasPage() {
     );
   }
 
+  function toggleDescription(id: string) {
+    setOpenDescriptions((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
   /* =====================
      UI
   ===================== */
@@ -311,6 +318,7 @@ export default function VentasPage() {
         <div className="space-y-3">
           {salesFiltradas.map((s) => {
             const open = openRows.includes(s.id);
+            const descOpen = openDescriptions.includes(s.id);
             const profit = getProfit(s);
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
@@ -438,6 +446,25 @@ export default function VentasPage() {
                   </div>
                 )}
 
+                {/* TOGGLE DESCRIPCIÓN */}
+                {s.description && (
+                  <div>
+                    <button
+                      onClick={() => toggleDescription(s.id)}
+                      className="flex items-center gap-1.5 text-sm text-muted hover:text-accent transition"
+                    >
+                      {descOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {descOpen ? "Ocultar descripción" : "Ver descripción"}
+                    </button>
+
+                    {descOpen && (
+                      <p className="text-sm text-muted whitespace-pre-wrap mt-1.5 pl-[22px]">
+                        {s.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* TOGGLE DETALLE */}
                 <button
                   onClick={() => toggleOpen(s.id)}
@@ -451,18 +478,12 @@ export default function VentasPage() {
                   </span>
                 </button>
 
-                {/* DETALLE: descripción + productos + imágenes */}
+                {/* DETALLE: productos + imágenes */}
                 {open && (
                   <div
                     className="space-y-2.5 pt-2.5 border-t"
                     style={{ borderColor: "rgb(var(--border))" }}
                   >
-                    {s.description && (
-                      <p className="text-sm text-muted whitespace-pre-wrap">
-                        {s.description}
-                      </p>
-                    )}
-
                     {s.sale_items.map((i) => (
                       <div key={i.id} className="flex items-center gap-3">
                         {i.image_url ? (
