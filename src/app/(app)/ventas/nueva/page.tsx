@@ -114,12 +114,15 @@ export default function NuevaVentaPage() {
 
   function updateQty(productId: string, qty: number) {
     setCart((prev) =>
+      prev.map((i) => (i.product.id === productId ? { ...i, qty } : i))
+    );
+  }
+
+  function clampQty(productId: string) {
+    setCart((prev) =>
       prev.map((i) =>
         i.product.id === productId
-          ? {
-              ...i,
-              qty: qty > i.product.stock ? i.product.stock : Math.max(1, qty),
-            }
+          ? { ...i, qty: Math.min(Math.max(1, i.qty || 1), i.product.stock) }
           : i
       )
     );
@@ -190,6 +193,14 @@ export default function NuevaVentaPage() {
 
     if (cart.some((i) => i.uploading)) {
       alert("Espera a que terminen de subirse las imágenes");
+      return;
+    }
+
+    const excedido = cart.find((i) => i.qty > i.product.stock);
+    if (excedido) {
+      alert(
+        `"${excedido.product.name}" excede el stock disponible (${excedido.product.stock})`
+      );
       return;
     }
 
@@ -415,14 +426,28 @@ export default function NuevaVentaPage() {
                       </div>
 
                       <div>
-                        <label className="text-xs text-muted">Cantidad</label>
+                        <label className="text-xs text-muted">
+                          Cantidad{" "}
+                          <span className="opacity-60">
+                            · Disponible: {i.product.stock}
+                          </span>
+                        </label>
                         <input
                           type="number"
                           min={1}
-                          className="input input-bordered w-full"
+                          max={i.product.stock}
+                          className={`input input-bordered w-full ${
+                            i.qty > i.product.stock ? "border-red-500" : ""
+                          }`}
                           value={i.qty}
                           onChange={(e) => updateQty(i.product.id, Number(e.target.value))}
+                          onBlur={() => clampQty(i.product.id)}
                         />
+                        {i.qty > i.product.stock && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Excede el stock disponible ({i.product.stock})
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
