@@ -15,6 +15,8 @@ import {
   Check,
   X,
   Search,
+  FileText,
+  Package,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
@@ -121,7 +123,7 @@ export default function VentasPage() {
   }, []);
 
   /* =====================
-     PROFIT (REAL & SAFE)
+     PROFIT
   ===================== */
 
   function getProfit(sale: Sale) {
@@ -129,7 +131,6 @@ export default function VentasPage() {
       (sum, i) => sum + i.unit_cost * i.qty,
       0
     );
-
     return sale.total - costos - sale.dtf_cost;
   }
 
@@ -143,15 +144,12 @@ export default function VentasPage() {
 
   const salesFiltradas = useMemo(() => {
     const q = search.trim().toLowerCase();
-
     return sales.filter((s) => {
       if (q && !s.customer_name.toLowerCase().includes(q)) return false;
       if (statusFilter !== "todas" && s.status !== statusFilter) return false;
-
       const d = s.created_at.slice(0, 10);
       if (from && d < from) return false;
       if (to && d > to) return false;
-
       return true;
     });
   }, [sales, search, statusFilter, from, to]);
@@ -161,23 +159,17 @@ export default function VentasPage() {
   ===================== */
 
   async function toggleStatus(sale: Sale) {
-    const next =
-      sale.status === "pendiente" ? "enviado" : "pendiente";
-
+    const next = sale.status === "pendiente" ? "enviado" : "pendiente";
     const { error } = await supabase
       .from("sales")
       .update({ status: next })
       .eq("id", sale.id);
-
-    if (error) {
-      alert(error.message);
-    } else {
-      loadSales();
-    }
+    if (error) alert(error.message);
+    else loadSales();
   }
 
   /* =====================
-     REGISTRAR PAGO (anticipo -> completar saldo)
+     REGISTRAR PAGO
   ===================== */
 
   function startPayment(sale: Sale) {
@@ -192,23 +184,13 @@ export default function VentasPage() {
 
   async function confirmPayment(sale: Sale) {
     const amount = Number(payAmount);
-    if (!amount || amount <= 0) {
-      alert("Ingresa un monto válido");
-      return;
-    }
-
+    if (!amount || amount <= 0) { alert("Ingresa un monto válido"); return; }
     const nuevoAnticipo = Math.min(sale.total, (sale.advance_payment || 0) + amount);
-
     const { error } = await supabase
       .from("sales")
       .update({ advance_payment: nuevoAnticipo })
       .eq("id", sale.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
+    if (error) { alert(error.message); return; }
     cancelPayment();
     loadSales();
   }
@@ -218,14 +200,10 @@ export default function VentasPage() {
   ===================== */
 
   async function deleteSale(id: string) {
-    const ok = confirm(
-      "¿Eliminar esta venta? Esta acción no se puede deshacer."
-    );
+    const ok = confirm("¿Eliminar esta venta? Esta acción no se puede deshacer.");
     if (!ok) return;
-
     await supabase.from("sale_items").delete().eq("sale_id", id);
     await supabase.from("sales").delete().eq("id", id);
-
     loadSales();
   }
 
@@ -246,73 +224,91 @@ export default function VentasPage() {
   ===================== */
 
   return (
-    <div className="space-y-6 pb-24">
-      <h1 className="text-2xl font-semibold">Ventas (Libro Diario)</h1>
+    <div className="space-y-5 pb-24">
 
-      {/* BÚSQUEDA Y FILTROS */}
-      <div className="card p-4 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[200px] space-y-1">
-          <label className="text-xs text-muted">Buscar cliente</label>
-          <div className="flex items-center gap-2">
-            <Search size={16} className="text-muted shrink-0" />
+      {/* TÍTULO */}
+      <div>
+        <h1 className="text-2xl font-semibold">Ventas</h1>
+        <p className="text-sm text-muted">Libro diario de pedidos</p>
+      </div>
+
+      {/* FILTROS */}
+      <div className="card p-3 space-y-3">
+
+        {/* Fila 1: búsqueda + chips de estado */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Búsqueda */}
+          <div className="flex items-center gap-2 flex-1 min-w-[180px] card-soft px-3 py-2">
+            <Search size={14} className="text-muted shrink-0" />
             <input
-              className="input input-bordered w-full"
-              placeholder="Nombre del cliente"
+              style={{ background: "transparent", border: "none", outline: "none", padding: 0 }}
+              className="w-full text-sm"
+              placeholder="Buscar cliente…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-muted hover:text-red-500 shrink-0">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Chips de estado */}
+          <div className="card-soft flex p-1 gap-0.5">
+            {(["todas", "pendiente", "enviado"] as const).map((v) => {
+              const label = v === "todas" ? "Todas" : v === "pendiente" ? "Pendiente" : "Finalizado";
+              return (
+                <button
+                  key={v}
+                  onClick={() => setStatusFilter(v)}
+                  className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-all ${
+                    statusFilter === v ? "bg-accent text-black" : "text-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-xs text-muted">Estado</label>
-          <select
-            className="input input-bordered"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-          >
-            <option value="todas">Todas</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="enviado">Finalizado</option>
-          </select>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs text-muted">Desde</label>
+        {/* Fila 2: rango de fechas */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Calendar size={13} className="text-muted shrink-0" />
           <input
             type="date"
-            className="input input-bordered"
+            className="input input-bordered text-sm py-1.5"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
           />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs text-muted">Hasta</label>
+          <span className="text-muted text-xs">—</span>
           <input
             type="date"
-            className="input input-bordered"
+            className="input input-bordered text-sm py-1.5"
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />
+          {hayFiltrosActivos && (
+            <button
+              onClick={limpiarFiltros}
+              className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1 transition"
+            >
+              <X size={13} /> Limpiar
+            </button>
+          )}
         </div>
 
-        {hayFiltrosActivos && (
-          <button onClick={limpiarFiltros} className="btn btn-ghost btn-sm text-red-500">
-            Limpiar
-          </button>
-        )}
       </div>
 
+      {/* LISTA */}
       {loading ? (
-        <div className="card p-6 text-sm text-muted">Cargando…</div>
+        <div className="card p-8 text-center text-sm text-muted">Cargando…</div>
       ) : sales.length === 0 ? (
-        <div className="card p-6 text-center text-sm text-muted">
-          No hay ventas registradas
-        </div>
+        <div className="card p-8 text-center text-sm text-muted">No hay ventas registradas</div>
       ) : salesFiltradas.length === 0 ? (
-        <div className="card p-6 text-center text-sm text-muted">
-          Ninguna venta coincide con los filtros aplicados
+        <div className="card p-8 text-center text-sm text-muted">
+          Ninguna venta coincide con los filtros
         </div>
       ) : (
         <div className="space-y-3">
@@ -322,231 +318,227 @@ export default function VentasPage() {
             const profit = getProfit(s);
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
+            const finalizado = s.status === "enviado";
 
             return (
-              <div key={s.id} className="card p-3 sm:p-4 space-y-2.5">
-                {/* HEADER: fecha / cliente / estado */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-xs text-muted">
-                      <Calendar size={12} />
-                      {new Date(s.created_at).toLocaleDateString("es-GT", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+              <div key={s.id} className="card overflow-hidden flex">
+
+                {/* Franja de estado (izquierda) */}
+                <div className={`w-1 shrink-0 ${finalizado ? "bg-green-500" : "bg-yellow-400"}`} />
+
+                {/* Contenido */}
+                <div className="flex-1 min-w-0 p-4 space-y-3">
+
+                  {/* ENCABEZADO */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <p className="font-semibold text-base leading-tight truncate">
+                        {s.customer_name}
+                      </p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        <span className="flex items-center gap-1 text-xs text-muted">
+                          <Calendar size={11} />
+                          {new Date(s.created_at).toLocaleDateString("es-GT", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                        {s.customer_phone && (
+                          <span className="flex items-center gap-1 text-xs text-muted">
+                            <Phone size={11} />
+                            {s.customer_phone}
+                          </span>
+                        )}
+                        {s.customer_address && (
+                          <span className="flex items-center gap-1 text-xs text-muted">
+                            <MapPin size={11} />
+                            <span className="truncate max-w-[140px]">{s.customer_address}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="font-semibold text-base truncate leading-tight">
-                      {s.customer_name}
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                      {s.customer_phone && (
-                        <div className="flex items-center gap-1 text-xs text-muted">
-                          <Phone size={12} />
-                          <span className="truncate">{s.customer_phone}</span>
-                        </div>
-                      )}
-                      {s.customer_address && (
-                        <div className="flex items-center gap-1 text-xs text-muted">
-                          <MapPin size={12} />
-                          <span className="truncate">{s.customer_address}</span>
-                        </div>
-                      )}
+                    {/* Estado + eliminar */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => toggleStatus(s)}
+                        title="Cambiar estado"
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                          finalizado
+                            ? "bg-green-500/15 text-green-600"
+                            : "bg-yellow-500/15 text-yellow-600"
+                        }`}
+                      >
+                        <RefreshCw size={10} />
+                        {finalizado ? "Finalizado" : "Pendiente"}
+                      </button>
+                      <button
+                        onClick={() => deleteSale(s.id)}
+                        title="Eliminar venta"
+                        className="p-1.5 text-muted hover:text-red-500 transition rounded-lg"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => toggleStatus(s)}
-                    title="Cambiar estado"
-                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
-                      s.status === "enviado"
-                        ? "bg-green-500/15 text-green-600"
-                        : "bg-yellow-500/15 text-yellow-600"
-                    }`}
-                  >
-                    {s.status === "enviado" ? "Finalizado" : "Pendiente"}
-                  </button>
-                </div>
-
-                {/* RESUMEN FINANCIERO */}
-                <div
-                  className={`grid gap-1.5 text-sm ${
-                    tieneAnticipo ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"
-                  }`}
-                >
-                  <Stat label="Total" value={`Q${s.total.toFixed(2)}`} />
-
-                  {tieneAnticipo && (
-                    <>
-                      <Stat
-                        label="Anticipo"
-                        value={`Q${s.advance_payment.toFixed(2)}`}
-                        icon={<Wallet size={12} />}
+                  {/* RESUMEN FINANCIERO — fila inline */}
+                  <div className="flex flex-wrap gap-x-5 gap-y-1">
+                    <FinStat label="Total" value={`Q${s.total.toFixed(2)}`} />
+                    {tieneAnticipo && (
+                      <>
+                        <FinStat
+                          label="Anticipo"
+                          value={`Q${s.advance_payment.toFixed(2)}`}
+                          icon={<Wallet size={11} />}
+                        />
+                        <FinStat
+                          label="Saldo"
+                          value={`Q${saldo.toFixed(2)}`}
+                          colorClass="text-accent"
+                        />
+                      </>
+                    )}
+                    <span className="text-sm">
+                      <span className="text-xs text-muted">Ganancia </span>
+                      <ProfitValue
+                        value={`Q${profit.toFixed(2)}`}
+                        className={`font-semibold ${profit >= 0 ? "text-green-600" : "text-red-600"}`}
                       />
-                      <Stat
-                        label="Saldo pendiente"
-                        value={`Q${saldo.toFixed(2)}`}
-                        accent
-                      />
-                    </>
+                    </span>
+                  </div>
+
+                  {/* REGISTRAR PAGO */}
+                  {saldo > 0 && (
+                    <div className="card-soft px-3 py-2">
+                      {payingId === s.id ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-muted shrink-0">Monto recibido</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={saldo}
+                            step="0.01"
+                            autoFocus
+                            className="input input-bordered w-28 py-1.5 text-sm"
+                            value={payAmount}
+                            onChange={(e) =>
+                              setPayAmount(e.target.value === "" ? "" : Number(e.target.value))
+                            }
+                          />
+                          <button
+                            onClick={() => confirmPayment(s)}
+                            className="btn btn-primary btn-sm flex items-center gap-1 px-3 py-1.5"
+                          >
+                            <Check size={14} /> Confirmar
+                          </button>
+                          <button
+                            onClick={cancelPayment}
+                            className="btn btn-ghost btn-sm p-1.5 text-muted"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startPayment(s)}
+                          className="flex items-center gap-2 text-sm font-medium text-accent"
+                        >
+                          <Banknote size={15} />
+                          Cobrar saldo (Q{saldo.toFixed(2)})
+                        </button>
+                      )}
+                    </div>
                   )}
 
-                  <Stat
-                    label="Ganancia"
-                    value={`Q${profit.toFixed(2)}`}
-                    positive={profit >= 0}
-                    negative={profit < 0}
-                    gated
-                  />
-                </div>
-
-                {/* REGISTRAR PAGO (saldo pendiente -> completar) */}
-                {saldo > 0 && (
-                  <div className="card-soft px-3 py-2">
-                    {payingId === s.id ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted shrink-0">Monto recibido</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={saldo}
-                          step="0.01"
-                          autoFocus
-                          className="input input-bordered w-28 py-1.5 text-sm"
-                          value={payAmount}
-                          onChange={(e) =>
-                            setPayAmount(e.target.value === "" ? "" : Number(e.target.value))
-                          }
-                        />
-                        <button
-                          onClick={() => confirmPayment(s)}
-                          className="btn btn-primary btn-sm flex items-center gap-1 px-3 py-1.5"
-                        >
-                          <Check size={14} />
-                          Confirmar
-                        </button>
-                        <button
-                          onClick={cancelPayment}
-                          className="btn btn-ghost btn-sm flex items-center gap-1 px-2 py-1.5 text-muted"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startPayment(s)}
-                        className="flex items-center gap-1.5 text-sm font-medium text-accent"
-                      >
-                        <Banknote size={15} />
-                        Registrar pago de saldo
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* TOGGLE DESCRIPCIÓN */}
-                {s.description && (
-                  <div>
-                    <button
-                      onClick={() => toggleDescription(s.id)}
-                      className="flex items-center gap-1.5 text-sm text-muted hover:text-accent transition"
-                    >
-                      {descOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                      {descOpen ? "Ocultar descripción" : "Ver descripción"}
-                    </button>
-
-                    {descOpen && (
-                      <p className="text-sm text-muted whitespace-pre-wrap mt-1.5 pl-[22px]">
-                        {s.description}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* TOGGLE DETALLE */}
-                <button
-                  onClick={() => toggleOpen(s.id)}
-                  className="flex items-center gap-1.5 text-sm text-muted hover:text-accent transition"
-                >
-                  {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  {open ? "Ocultar detalle" : "Ver detalle"}
-                  <span className="opacity-60">
-                    · {s.sale_items.length}{" "}
-                    {s.sale_items.length === 1 ? "producto" : "productos"}
-                  </span>
-                </button>
-
-                {/* DETALLE: productos + imágenes */}
-                {open && (
+                  {/* FOOTER: toggles */}
                   <div
-                    className="space-y-2.5 pt-2.5 border-t"
+                    className="flex items-center gap-4 pt-2 border-t"
                     style={{ borderColor: "rgb(var(--border))" }}
                   >
-                    {s.sale_items.map((i) => (
-                      <div key={i.id} className="flex items-center gap-3">
-                        {i.image_url ? (
-                          <a
-                            href={i.image_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="shrink-0"
-                            title="Ver diseño en tamaño completo"
-                          >
-                            <img
-                              src={i.image_url}
-                              alt={i.product_name}
-                              className="w-24 h-24 rounded-xl object-cover border hover:opacity-90 transition"
-                              style={{ borderColor: "rgb(var(--border))" }}
-                            />
-                          </a>
-                        ) : (
-                          <div
-                            className="w-24 h-24 rounded-xl border border-dashed flex items-center justify-center text-muted shrink-0"
-                            style={{ borderColor: "rgb(var(--border))" }}
-                          >
-                            <ImageOff size={20} />
-                          </div>
-                        )}
+                    {s.description && (
+                      <button
+                        onClick={() => toggleDescription(s.id)}
+                        className={`flex items-center gap-1.5 text-xs transition ${
+                          descOpen ? "text-accent" : "text-muted hover:text-accent"
+                        }`}
+                      >
+                        <FileText size={13} />
+                        {descOpen ? "Ocultar desc." : "Descripción"}
+                      </button>
+                    )}
 
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium truncate">
-                            {i.product_name}
-                          </div>
-                          <div className="text-xs text-muted">
-                            {i.qty} × Q{i.unit_price.toFixed(2)} = Q
-                            {(i.qty * i.unit_price).toFixed(2)}
+                    <button
+                      onClick={() => toggleOpen(s.id)}
+                      className={`flex items-center gap-1.5 text-xs transition ${
+                        open ? "text-accent" : "text-muted hover:text-accent"
+                      }`}
+                    >
+                      <Package size={13} />
+                      {s.sale_items.length}{" "}
+                      {s.sale_items.length === 1 ? "producto" : "productos"}
+                      {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                  </div>
+
+                  {/* DESCRIPCIÓN (expandida) */}
+                  {descOpen && s.description && (
+                    <p className="text-sm text-muted whitespace-pre-wrap leading-relaxed">
+                      {s.description}
+                    </p>
+                  )}
+
+                  {/* DETALLE: productos + imágenes */}
+                  {open && (
+                    <div
+                      className="space-y-3 pt-2 border-t"
+                      style={{ borderColor: "rgb(var(--border))" }}
+                    >
+                      {s.sale_items.map((i) => (
+                        <div key={i.id} className="flex items-center gap-3">
+                          {i.image_url ? (
+                            <a
+                              href={i.image_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0"
+                              title="Ver diseño en tamaño completo"
+                            >
+                              <img
+                                src={i.image_url}
+                                alt={i.product_name}
+                                className="w-24 h-24 rounded-xl object-cover border hover:opacity-90 transition"
+                                style={{ borderColor: "rgb(var(--border))" }}
+                              />
+                            </a>
+                          ) : (
+                            <div
+                              className="w-24 h-24 rounded-xl border border-dashed flex items-center justify-center text-muted shrink-0"
+                              style={{ borderColor: "rgb(var(--border))" }}
+                            >
+                              <ImageOff size={20} />
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{i.product_name}</p>
+                            <p className="text-xs text-muted">
+                              {i.qty} × Q{i.unit_price.toFixed(2)} ={" "}
+                              <span className="font-medium">Q{(i.qty * i.unit_price).toFixed(2)}</span>
+                            </p>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
 
-                    {s.dtf_cost > 0 && (
-                      <div className="text-xs text-muted">
-                        Costo DTF: − Q{s.dtf_cost.toFixed(2)}
-                      </div>
-                    )}
-                  </div>
-                )}
+                      {s.dtf_cost > 0 && (
+                        <p className="text-xs text-muted pt-1">
+                          Costo DTF: − Q{s.dtf_cost.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                {/* ACCIONES */}
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => toggleStatus(s)}
-                    className="btn btn-ghost btn-sm flex items-center gap-1.5 text-blue-500 hover:text-blue-600"
-                  >
-                    <RefreshCw size={14} />
-                    Cambiar estado
-                  </button>
-
-                  <button
-                    onClick={() => deleteSale(s.id)}
-                    className="btn btn-ghost btn-sm flex items-center gap-1.5 text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 size={14} />
-                    Eliminar
-                  </button>
                 </div>
               </div>
             );
@@ -558,43 +550,27 @@ export default function VentasPage() {
 }
 
 /* =====================
-   STAT (resumen financiero)
+   FIN STAT — fila inline de cifras
 ===================== */
 
-function Stat({
+function FinStat({
   label,
   value,
   icon,
-  accent,
-  positive,
-  negative,
-  gated,
+  colorClass,
 }: {
   label: string;
   value: string;
   icon?: React.ReactNode;
-  accent?: boolean;
-  positive?: boolean;
-  negative?: boolean;
-  gated?: boolean;
+  colorClass?: string;
 }) {
-  const cls = `font-semibold ${
-    accent
-      ? "text-accent"
-      : positive
-      ? "text-green-600"
-      : negative
-      ? "text-red-600"
-      : ""
-  }`;
-
   return (
-    <div className="card-soft px-3 py-2">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted">
-        {icon}
-        {label}
-      </div>
-      {gated ? <ProfitValue value={value} className={cls} /> : <div className={cls}>{value}</div>}
-    </div>
+    <span className="text-sm">
+      <span className="text-xs text-muted">
+        {icon && <span className="inline-flex align-middle mr-0.5">{icon}</span>}
+        {label}{" "}
+      </span>
+      <span className={`font-semibold ${colorClass ?? ""}`}>{value}</span>
+    </span>
   );
 }

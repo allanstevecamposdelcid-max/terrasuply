@@ -11,6 +11,7 @@ import {
   DollarSign,
   Package,
   Boxes,
+  X,
 } from "lucide-react";
 
 /* =====================
@@ -58,18 +59,11 @@ export default function InventarioPage() {
     const { data, error } = await query;
     setLoading(false);
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
+    if (error) { alert(error.message); return; }
     setItems((data as Product[]) || []);
   }
 
-  useEffect(() => {
-    load();
-  }, []);
-
+  useEffect(() => { load(); }, []);
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
@@ -78,106 +72,147 @@ export default function InventarioPage() {
   /* ===== DELETE (SOFT) ===== */
 
   async function deleteProduct(id: string) {
-    const ok = confirm(
-      "¿Eliminar este producto?\nNo se podrá vender, pero el historial se conserva."
-    );
+    const ok = confirm("¿Eliminar este producto?\nNo se podrá vender, pero el historial se conserva.");
     if (!ok) return;
-
-    const { error } = await supabase
-      .from("products")
-      .update({ active: false })
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
+    const { error } = await supabase.from("products").update({ active: false }).eq("id", id);
+    if (error) { alert(error.message); return; }
     load();
   }
 
+  /* =====================
+     UI
+  ===================== */
+
   return (
     <div className="space-y-6 pb-28">
-      <div>
-        <h1 className="text-2xl font-semibold">Inventario</h1>
-        <p className="text-sm text-muted">Productos disponibles para la venta</p>
+
+      {/* ENCABEZADO */}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Inventario</h1>
+          <p className="text-sm text-muted">Productos disponibles para la venta</p>
+        </div>
+        <span className="text-sm text-muted">
+          {!loading && `${items.length} producto${items.length !== 1 ? "s" : ""}`}
+        </span>
       </div>
 
-      {/* SEARCH */}
-      <div className="flex items-center gap-2 max-w-sm">
-        <Search size={16} className="text-muted shrink-0" />
+      {/* BÚSQUEDA */}
+      <div className="card-soft flex items-center gap-2 px-4 py-3 max-w-sm">
+        <Search size={15} className="text-muted shrink-0" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por nombre o código..."
-          className="input input-bordered w-full"
+          placeholder="Buscar por nombre o código…"
+          style={{ background: "transparent", border: "none", outline: "none", padding: 0 }}
+          className="w-full text-sm"
         />
+        {q && (
+          <button onClick={() => setQ("")} className="text-muted hover:text-red-500 shrink-0 transition">
+            <X size={14} />
+          </button>
+        )}
       </div>
 
-      {loading && <div className="text-sm text-muted">Cargando…</div>}
+      {/* ESTADO DE CARGA */}
+      {loading && (
+        <div className="text-sm text-muted">Cargando…</div>
+      )}
 
-      {/* LIST */}
+      {/* GRID DE PRODUCTOS */}
       {!loading && items.length === 0 ? (
-        <div className="card p-6 text-center text-sm text-muted">
-          No hay productos registrados
+        <div className="card p-10 text-center space-y-2">
+          <Package size={32} className="text-muted mx-auto opacity-40" />
+          <p className="text-sm text-muted">No hay productos registrados</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {items.map((p) => (
-            <div key={p.id} className="card p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-semibold truncate">{p.name}</div>
-                  {p.sku && (
-                    <div className="flex items-center gap-1 text-xs text-muted mt-0.5">
-                      <Tag size={12} />
-                      <span className="truncate">{p.sku}</span>
-                    </div>
-                  )}
-                </div>
+          {items.map((p) => {
+            const sinStock = p.stock <= 0;
+            const stockBajo = !sinStock && p.stock <= 3;
 
-                <span
-                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
-                    p.stock <= 0
-                      ? "bg-red-500/15 text-red-600"
-                      : "bg-green-500/15 text-green-600"
+            return (
+              <div key={p.id} className="card overflow-hidden flex flex-col">
+
+                {/* Franja de stock (color según nivel) */}
+                <div
+                  className={`h-0.5 ${
+                    sinStock ? "bg-red-500" : stockBajo ? "bg-yellow-400" : "bg-green-500"
                   }`}
-                >
-                  {p.stock <= 0 ? "Agotado" : `${p.stock} disponibles`}
-                </span>
-              </div>
+                />
 
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <Info label="Precio" value={`Q${p.price.toFixed(2)}`} accent />
-                <Info label="Costo" value={`Q${p.cost.toFixed(2)}`} />
-              </div>
+                <div className="flex-1 p-4 space-y-4">
+                  {/* ENCABEZADO DE TARJETA */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate leading-tight">{p.name}</p>
+                      {p.sku && (
+                        <div className="flex items-center gap-1 text-xs text-muted mt-0.5">
+                          <Tag size={11} />
+                          <span className="truncate">{p.sku}</span>
+                        </div>
+                      )}
+                    </div>
 
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  onClick={() => {
-                    setEditing(p);
-                    setOpenEdit(true);
-                  }}
-                  className="btn btn-ghost btn-sm flex items-center gap-1.5 text-blue-500 hover:text-blue-600"
-                >
-                  <Pencil size={14} />
-                  Editar
-                </button>
+                    {/* Acciones */}
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() => { setEditing(p); setOpenEdit(true); }}
+                        title="Editar producto"
+                        className="p-1.5 text-muted hover:text-blue-500 transition rounded-lg"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => deleteProduct(p.id)}
+                        title="Eliminar producto"
+                        className="p-1.5 text-muted hover:text-red-500 transition rounded-lg"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
 
-                <button
-                  onClick={() => deleteProduct(p.id)}
-                  className="btn btn-ghost btn-sm flex items-center gap-1.5 text-red-500 hover:text-red-600"
-                >
-                  <Trash2 size={14} />
-                  Eliminar
-                </button>
+                  {/* STOCK + PRECIO / COSTO */}
+                  <div
+                    className="grid grid-cols-3 gap-3 pt-3 border-t"
+                    style={{ borderColor: "rgb(var(--border))" }}
+                  >
+                    {/* Stock */}
+                    <div className="col-span-1">
+                      <p className="text-[10px] text-muted uppercase tracking-wider mb-0.5">Stock</p>
+                      <p
+                        className={`text-2xl font-bold leading-none ${
+                          sinStock ? "text-red-500" : stockBajo ? "text-yellow-500" : "text-green-500"
+                        }`}
+                      >
+                        {p.stock}
+                      </p>
+                      <p className="text-[10px] text-muted mt-0.5">
+                        {sinStock ? "agotado" : stockBajo ? "stock bajo" : "disponible"}
+                      </p>
+                    </div>
+
+                    {/* Precio */}
+                    <div className="col-span-1 card-soft px-2 py-2 rounded-xl">
+                      <p className="text-[10px] text-muted uppercase tracking-wider mb-0.5">Precio</p>
+                      <p className="font-semibold text-accent">Q{p.price.toFixed(2)}</p>
+                    </div>
+
+                    {/* Costo */}
+                    <div className="col-span-1 card-soft px-2 py-2 rounded-xl">
+                      <p className="text-[10px] text-muted uppercase tracking-wider mb-0.5">Costo</p>
+                      <p className="font-semibold">Q{p.cost.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* CREATE */}
+      {/* BOTÓN CREAR */}
       <button
         className="btn btn-primary fixed left-4 right-4 bottom-[84px] md:left-auto md:right-8 md:bottom-8 md:w-auto md:px-6 flex items-center justify-center gap-2 shadow-lg"
         onClick={() => setOpenCreate(true)}
@@ -189,48 +224,17 @@ export default function InventarioPage() {
       {openCreate && (
         <CreateProductModal
           onClose={() => setOpenCreate(false)}
-          onCreated={() => {
-            setOpenCreate(false);
-            load();
-          }}
+          onCreated={() => { setOpenCreate(false); load(); }}
         />
       )}
 
       {openEdit && editing && (
         <EditProductModal
           product={editing}
-          onClose={() => {
-            setOpenEdit(false);
-            setEditing(null);
-          }}
-          onSaved={() => {
-            setOpenEdit(false);
-            setEditing(null);
-            load();
-          }}
+          onClose={() => { setOpenEdit(false); setEditing(null); }}
+          onSaved={() => { setOpenEdit(false); setEditing(null); load(); }}
         />
       )}
-    </div>
-  );
-}
-
-/* =====================
-   INFO (precio / costo)
-===================== */
-
-function Info({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="card-soft px-3 py-2">
-      <div className="text-[11px] text-muted">{label}</div>
-      <div className={`font-semibold ${accent ? "text-accent" : ""}`}>{value}</div>
     </div>
   );
 }
@@ -248,21 +252,14 @@ function CreateProductModal({
 }) {
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
-
   const [stock, setStock] = useState<number | "">("");
   const [cost, setCost] = useState<number | "">("");
   const [price, setPrice] = useState<number | "">("");
-
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!name.trim()) {
-      alert("Nombre requerido");
-      return;
-    }
-
+    if (!name.trim()) { alert("Nombre requerido"); return; }
     setSaving(true);
-
     const { error } = await supabase.from("products").insert({
       name: name.trim(),
       sku: sku.trim() || null,
@@ -271,32 +268,20 @@ function CreateProductModal({
       price: Number(price || 0),
       active: true,
     });
-
     setSaving(false);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
+    if (error) { alert(error.message); return; }
     onCreated();
   }
 
   return (
-    <Modal title="Crear producto" onClose={onClose}>
+    <Modal title="Nuevo producto" onClose={onClose}>
       <ProductForm
-        name={name}
-        setName={setName}
-        sku={sku}
-        setSku={setSku}
-        stock={stock}
-        setStock={setStock}
-        cost={cost}
-        setCost={setCost}
-        price={price}
-        setPrice={setPrice}
+        name={name} setName={setName}
+        sku={sku} setSku={setSku}
+        stock={stock} setStock={setStock}
+        cost={cost} setCost={setCost}
+        price={price} setPrice={setPrice}
       />
-
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
@@ -324,7 +309,6 @@ function EditProductModal({
 
   async function save() {
     setSaving(true);
-
     const { error } = await supabase
       .from("products")
       .update({
@@ -335,7 +319,6 @@ function EditProductModal({
         price: Number(price || 0),
       })
       .eq("id", product.id);
-
     setSaving(false);
     if (error) return alert(error.message);
     onSaved();
@@ -344,18 +327,12 @@ function EditProductModal({
   return (
     <Modal title="Editar producto" onClose={onClose}>
       <ProductForm
-        name={name}
-        setName={setName}
-        sku={sku}
-        setSku={setSku}
-        stock={stock}
-        setStock={setStock}
-        cost={cost}
-        setCost={setCost}
-        price={price}
-        setPrice={setPrice}
+        name={name} setName={setName}
+        sku={sku} setSku={setSku}
+        stock={stock} setStock={setStock}
+        cost={cost} setCost={setCost}
+        price={price} setPrice={setPrice}
       />
-
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
@@ -376,15 +353,31 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/40 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className="card w-full sm:max-w-md p-5 space-y-4"
+        className="card w-full sm:max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="font-semibold text-lg">{title}</div>
-        {children}
+        {/* Modal header */}
+        <div
+          className="flex items-center justify-between px-5 py-4 border-b"
+          style={{ borderColor: "rgb(var(--border))" }}
+        >
+          <p className="font-semibold text-base">{title}</p>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-muted hover:text-red-500 transition rounded-lg"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Modal body */}
+        <div className="p-5 space-y-4">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -405,7 +398,7 @@ function ModalActions({
         Cancelar
       </button>
       <button className="btn btn-primary flex-1" onClick={onSave} disabled={saving}>
-        {saving ? "Guardando..." : "Guardar"}
+        {saving ? "Guardando…" : "Guardar"}
       </button>
     </div>
   );
@@ -414,27 +407,17 @@ function ModalActions({
 type NumField = number | "";
 
 function ProductForm({
-  name,
-  setName,
-  sku,
-  setSku,
-  stock,
-  setStock,
-  cost,
-  setCost,
-  price,
-  setPrice,
+  name, setName,
+  sku, setSku,
+  stock, setStock,
+  cost, setCost,
+  price, setPrice,
 }: {
-  name: string;
-  setName: (v: string) => void;
-  sku: string;
-  setSku: (v: string) => void;
-  stock: NumField;
-  setStock: (v: NumField) => void;
-  cost: NumField;
-  setCost: (v: NumField) => void;
-  price: NumField;
-  setPrice: (v: NumField) => void;
+  name: string; setName: (v: string) => void;
+  sku: string; setSku: (v: string) => void;
+  stock: NumField; setStock: (v: NumField) => void;
+  cost: NumField; setCost: (v: NumField) => void;
+  price: NumField; setPrice: (v: NumField) => void;
 }) {
   function asNumber(raw: string): NumField {
     return raw === "" ? "" : Number(raw);
@@ -446,7 +429,7 @@ function ProductForm({
         <Package size={16} className="text-muted shrink-0" />
         <input
           className="input input-bordered w-full"
-          placeholder="Nombre"
+          placeholder="Nombre del producto"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -456,7 +439,7 @@ function ProductForm({
         <Tag size={16} className="text-muted shrink-0" />
         <input
           className="input input-bordered w-full"
-          placeholder="Código (SKU)"
+          placeholder="Código SKU (opcional)"
           value={sku}
           onChange={(e) => setSku(e.target.value)}
         />
