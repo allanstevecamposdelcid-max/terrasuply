@@ -260,7 +260,7 @@ export default function DashboardPage() {
           raw
         />
         <Metric
-          label="Enviado"
+          label="Finalizado"
           value={<ProfitValue value={`Q${enviado.toFixed(2)}`} className="text-3xl font-semibold" />}
           icon={<CheckCircle size={18} />}
           raw

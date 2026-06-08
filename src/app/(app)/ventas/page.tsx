@@ -273,7 +273,7 @@ export default function VentasPage() {
           >
             <option value="todas">Todas</option>
             <option value="pendiente">Pendiente</option>
-            <option value="enviado">Enviado</option>
+            <option value="enviado">Finalizado</option>
           </select>
         </div>
 
@@ -366,7 +366,7 @@ export default function VentasPage() {
                         : "bg-yellow-500/15 text-yellow-600"
                     }`}
                   >
-                    {s.status === "enviado" ? "Enviado" : "Pendiente"}
+                    {s.status === "enviado" ? "Finalizado" : "Pendiente"}
                   </button>
                 </div>
 
