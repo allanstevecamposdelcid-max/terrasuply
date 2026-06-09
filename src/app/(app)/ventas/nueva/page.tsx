@@ -479,7 +479,7 @@ export default function NuevaVentaPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Paquetería / Envío</label>
+            <label className="text-sm font-medium">Paquetería Comisión</label>
             <div className="flex gap-2 items-center">
               <Truck size={16} />
               <div className="flex items-center input input-bordered w-full gap-1 px-3">
