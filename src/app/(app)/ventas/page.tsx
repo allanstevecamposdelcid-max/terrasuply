@@ -66,16 +66,12 @@ export default function VentasPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todas" | "pendiente" | "enviado">("todas");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
 
-  const hayFiltrosActivos = Boolean(search || statusFilter !== "todas" || from || to);
+  const hayFiltrosActivos = Boolean(search || statusFilter !== "todas");
 
   function limpiarFiltros() {
     setSearch("");
     setStatusFilter("todas");
-    setFrom("");
-    setTo("");
   }
 
   /* =====================
@@ -147,12 +143,9 @@ export default function VentasPage() {
     return sales.filter((s) => {
       if (q && !s.customer_name.toLowerCase().includes(q)) return false;
       if (statusFilter !== "todas" && s.status !== statusFilter) return false;
-      const d = s.created_at.slice(0, 10);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
       return true;
     });
-  }, [sales, search, statusFilter, from, to]);
+  }, [sales, search, statusFilter]);
 
   /* =====================
      CHANGE STATUS
@@ -271,24 +264,7 @@ export default function VentasPage() {
               );
             })}
           </div>
-        </div>
 
-        {/* Fila 2: rango de fechas */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Calendar size={13} className="text-muted shrink-0" />
-          <input
-            type="date"
-            className="input input-bordered text-sm py-1.5"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-          <span className="text-muted text-xs">—</span>
-          <input
-            type="date"
-            className="input input-bordered text-sm py-1.5"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
           {hayFiltrosActivos && (
             <button
               onClick={limpiarFiltros}
