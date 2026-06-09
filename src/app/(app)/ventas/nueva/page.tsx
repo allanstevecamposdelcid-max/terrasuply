@@ -537,7 +537,7 @@ export default function NuevaVentaPage() {
           {saldoBruto > 0 && (
             <>
               <div className="flex justify-between text-sm font-medium pt-0.5">
-                <span>Saldo en efectivo</span>
+                <span>Saldo Pendiente</span>
                 <span>Q{saldoBruto.toFixed(2)}</span>
               </div>
 
@@ -549,7 +549,7 @@ export default function NuevaVentaPage() {
               )}
 
               <div className="flex justify-between text-sm font-semibold text-accent">
-                <span>Recibís de la paquetería</span>
+                <span>Total calculado</span>
                 <span>Q{saldoPendiente.toFixed(2)}</span>
               </div>
             </>
