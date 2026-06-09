@@ -185,9 +185,9 @@ export default function NuevaVentaPage() {
   }
 
   const total = cart.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
-  const shippingCost = total * (shippingPct || 0) / 100;
-  const totalNeto = total - shippingCost;
-  const saldoPendiente = Math.max(totalNeto - (advancePayment || 0), 0);
+  const saldoBruto = Math.max(total - (advancePayment || 0), 0);
+  const shippingCost = saldoBruto > 0 ? saldoBruto * (shippingPct || 0) / 100 : 0;
+  const saldoPendiente = Math.max(saldoBruto - shippingCost, 0);
 
   async function saveSale() {
     if (!customerName || cart.length === 0) {
@@ -522,31 +522,34 @@ export default function NuevaVentaPage() {
 
         {/* TOTAL */}
         <div className="space-y-1 border-t pt-4" style={{ borderColor: "rgb(var(--border))" }}>
-          <div className="flex justify-between text-sm text-muted">
-            <span>Subtotal productos</span>
+          <div className="flex justify-between text-lg font-semibold">
+            <span>Total</span>
             <span>Q{total.toFixed(2)}</span>
           </div>
 
-          {shippingCost > 0 && (
+          {(advancePayment > 0 || saldoBruto > 0) && (
             <div className="flex justify-between text-sm text-muted">
-              <span>Paquetería Comisión ({shippingPct}%)</span>
-              <span>− Q{shippingCost.toFixed(2)}</span>
+              <span>Anticipo (transferencia)</span>
+              <span>− Q{Number(advancePayment || 0).toFixed(2)}</span>
             </div>
           )}
 
-          <div className="flex justify-between text-lg font-semibold pt-1">
-            <span>Total</span>
-            <span>Q{totalNeto.toFixed(2)}</span>
-          </div>
-
-          {advancePayment > 0 && (
+          {saldoBruto > 0 && (
             <>
-              <div className="flex justify-between text-sm text-muted">
-                <span>Anticipo (transferencia)</span>
-                <span>− Q{Number(advancePayment).toFixed(2)}</span>
+              <div className="flex justify-between text-sm font-medium pt-0.5">
+                <span>Saldo en efectivo</span>
+                <span>Q{saldoBruto.toFixed(2)}</span>
               </div>
+
+              {shippingCost > 0 && (
+                <div className="flex justify-between text-sm text-muted">
+                  <span>− Comisión paquetería ({shippingPct}%)</span>
+                  <span>− Q{shippingCost.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-sm font-semibold text-accent">
-                <span>Saldo pendiente (efectivo)</span>
+                <span>Recibís de la paquetería</span>
                 <span>Q{saldoPendiente.toFixed(2)}</span>
               </div>
             </>

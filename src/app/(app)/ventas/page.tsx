@@ -17,7 +17,6 @@ import {
   Search,
   FileText,
   Package,
-  Truck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
@@ -134,8 +133,8 @@ export default function VentasPage() {
   }
 
   function getSaldoPendiente(sale: Sale) {
-    const totalNeto = sale.total - (sale.shipping_cost || 0);
-    return Math.max(totalNeto - (sale.advance_payment || 0), 0);
+    const saldoBruto = Math.max(sale.total - (sale.advance_payment || 0), 0);
+    return Math.max(saldoBruto - (sale.shipping_cost || 0), 0);
   }
 
   /* =====================
@@ -298,7 +297,6 @@ export default function VentasPage() {
             const profit = getProfit(s);
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
-            const tieneEnvio = (s.shipping_cost || 0) > 0;
             const finalizado = s.status === "enviado";
             const headerBg = finalizado ? "rgb(var(--accent) / 0.07)" : "rgb(var(--muted) / 0.06)";
 
@@ -373,8 +371,8 @@ export default function VentasPage() {
                   {/* Métricas financieras */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <MiniStat
-                      label={tieneEnvio ? "Total (− envío)" : "Total"}
-                      value={`Q${(s.total - (s.shipping_cost || 0)).toFixed(2)}`}
+                      label="Total"
+                      value={`Q${s.total.toFixed(2)}`}
                       bold
                     />
                     {tieneAnticipo && (
