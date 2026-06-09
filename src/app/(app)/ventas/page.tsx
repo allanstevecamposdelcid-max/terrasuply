@@ -134,7 +134,7 @@ export default function VentasPage() {
   }
 
   function getSaldoPendiente(sale: Sale) {
-    return Math.max(sale.total - (sale.advance_payment || 0), 0);
+    return Math.max(sale.total - (sale.advance_payment || 0) - (sale.shipping_cost || 0), 0);
   }
 
   /* =====================

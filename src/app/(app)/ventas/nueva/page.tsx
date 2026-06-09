@@ -186,7 +186,7 @@ export default function NuevaVentaPage() {
 
   const total = cart.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   const shippingCost = total * (shippingPct || 0) / 100;
-  const saldoPendiente = Math.max(total - (advancePayment || 0), 0);
+  const saldoPendiente = Math.max(total - (advancePayment || 0) - shippingCost, 0);
 
   async function saveSale() {
     if (!customerName || cart.length === 0) {
