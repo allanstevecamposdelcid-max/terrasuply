@@ -24,6 +24,7 @@ type SaleItem = {
 type Sale = {
   total: number;
   dtf_cost: number;
+  advance_payment: number;
   sale_items: SaleItem[];
 };
 
@@ -61,6 +62,7 @@ export default function CajaPage() {
       .select(`
         total,
         dtf_cost,
+        advance_payment,
         sale_items (
           qty,
           unit_cost
@@ -132,8 +134,13 @@ export default function CajaPage() {
     [expenses]
   );
 
+  const totalAnticipo = useMemo(
+    () => sales.reduce((sum, s) => sum + (s.advance_payment || 0), 0),
+    [sales]
+  );
+
   const ganancia =
-    ingresos - costoProductos - dtfTotal - gastos;
+    totalAnticipo - costoProductos - dtfTotal - gastos;
 
   /* =====================
      ACTIONS

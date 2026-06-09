@@ -129,7 +129,7 @@ export default function VentasPage() {
       (sum, i) => sum + i.unit_cost * i.qty,
       0
     );
-    return sale.total - costos - sale.dtf_cost - (sale.shipping_cost || 0);
+    return (sale.advance_payment || 0) - costos - sale.dtf_cost;
   }
 
   function getSaldoPendiente(sale: Sale) {

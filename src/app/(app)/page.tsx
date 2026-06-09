@@ -28,6 +28,7 @@ type SaleItem = {
 type Sale = {
   total: number;
   dtf_cost: number;
+  advance_payment: number;
   status: "pendiente" | "enviado";
   created_at: string;
   sale_items: SaleItem[];
@@ -69,6 +70,7 @@ export default function DashboardPage() {
       .select(`
         total,
         dtf_cost,
+        advance_payment,
         status,
         created_at,
         sale_items (
@@ -156,8 +158,13 @@ export default function DashboardPage() {
     [expenses, from, to]
   );
 
+  const totalAnticipo = useMemo(
+    () => salesFiltradas.reduce((sum, s) => sum + (s.advance_payment || 0), 0),
+    [salesFiltradas]
+  );
+
   const ganancia =
-    totalVentas - costoProductos - dtfTotal - gastos;
+    totalAnticipo - costoProductos - dtfTotal - gastos;
 
   /* ======================
      UI
