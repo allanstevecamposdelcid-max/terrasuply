@@ -319,23 +319,26 @@ export default function VentasPage() {
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
             const finalizado = s.status === "enviado";
+            const accentRgb = finalizado ? "34 197 94" : "234 179 8";
 
             return (
-              <div key={s.id} className="card overflow-hidden flex">
-
-                {/* Franja de estado (izquierda) */}
-                <div className={`w-1 shrink-0 ${finalizado ? "bg-green-500" : "bg-yellow-400"}`} />
-
-                {/* Contenido */}
-                <div className="flex-1 min-w-0 p-4 space-y-3">
-
-                  {/* ENCABEZADO */}
+              <div
+                key={s.id}
+                className="card overflow-hidden p-0"
+                style={{ borderLeftWidth: "3px", borderLeftColor: `rgb(${accentRgb})` }}
+              >
+                {/* ── ENCABEZADO con tinte de color ── */}
+                <div
+                  className="px-4 pt-4 pb-3"
+                  style={{ background: `rgb(${accentRgb} / 0.07)` }}
+                >
                   <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="font-semibold text-base leading-tight truncate">
+                    {/* Nombre + info de contacto */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-lg leading-tight truncate">
                         {s.customer_name}
                       </p>
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                         <span className="flex items-center gap-1 text-xs text-muted">
                           <Calendar size={11} />
                           {new Date(s.created_at).toLocaleDateString("es-GT", {
@@ -360,14 +363,14 @@ export default function VentasPage() {
                     </div>
 
                     {/* Estado + eliminar */}
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
                       <button
                         onClick={() => toggleStatus(s)}
                         title="Cambiar estado"
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition ${
                           finalizado
-                            ? "bg-green-500/15 text-green-600"
-                            : "bg-yellow-500/15 text-yellow-600"
+                            ? "bg-green-500/20 text-green-600"
+                            : "bg-yellow-500/20 text-yellow-600"
                         }`}
                       >
                         <RefreshCw size={10} />
@@ -382,36 +385,39 @@ export default function VentasPage() {
                       </button>
                     </div>
                   </div>
+                </div>
 
-                  {/* RESUMEN FINANCIERO — fila inline */}
-                  <div className="flex flex-wrap gap-x-5 gap-y-1">
-                    <FinStat label="Total" value={`Q${s.total.toFixed(2)}`} />
+                {/* ── CUERPO ── */}
+                <div className="px-4 pb-4 pt-3 space-y-3">
+
+                  {/* Métricas financieras */}
+                  <div className={`grid gap-2 ${tieneAnticipo ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
+                    <MiniStat label="Total" value={`Q${s.total.toFixed(2)}`} bold />
                     {tieneAnticipo && (
                       <>
-                        <FinStat
+                        <MiniStat
                           label="Anticipo"
                           value={`Q${s.advance_payment.toFixed(2)}`}
-                          icon={<Wallet size={11} />}
+                          icon={<Wallet size={10} />}
                         />
-                        <FinStat
-                          label="Saldo"
+                        <MiniStat
+                          label="Saldo pendiente"
                           value={`Q${saldo.toFixed(2)}`}
                           colorClass="text-accent"
                         />
                       </>
                     )}
-                    <span className="text-sm">
-                      <span className="text-xs text-muted">Ganancia </span>
-                      <ProfitValue
-                        value={`Q${profit.toFixed(2)}`}
-                        className={`font-semibold ${profit >= 0 ? "text-green-600" : "text-red-600"}`}
-                      />
-                    </span>
+                    <MiniStat
+                      label="Ganancia"
+                      value={`Q${profit.toFixed(2)}`}
+                      colorClass={profit >= 0 ? "text-green-600" : "text-red-600"}
+                      gated
+                    />
                   </div>
 
-                  {/* REGISTRAR PAGO */}
+                  {/* Cobrar saldo pendiente */}
                   {saldo > 0 && (
-                    <div className="card-soft px-3 py-2">
+                    <div className="card-soft px-3 py-2.5 rounded-xl">
                       {payingId === s.id ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs text-muted shrink-0">Monto recibido</span>
@@ -452,9 +458,9 @@ export default function VentasPage() {
                     </div>
                   )}
 
-                  {/* FOOTER: toggles */}
+                  {/* Footer: toggles */}
                   <div
-                    className="flex items-center gap-4 pt-2 border-t"
+                    className="flex items-center gap-4 pt-1 border-t"
                     style={{ borderColor: "rgb(var(--border))" }}
                   >
                     {s.description && (
@@ -468,7 +474,6 @@ export default function VentasPage() {
                         {descOpen ? "Ocultar desc." : "Descripción"}
                       </button>
                     )}
-
                     <button
                       onClick={() => toggleOpen(s.id)}
                       className={`flex items-center gap-1.5 text-xs transition ${
@@ -482,14 +487,14 @@ export default function VentasPage() {
                     </button>
                   </div>
 
-                  {/* DESCRIPCIÓN (expandida) */}
+                  {/* Descripción expandida */}
                   {descOpen && s.description && (
                     <p className="text-sm text-muted whitespace-pre-wrap leading-relaxed">
                       {s.description}
                     </p>
                   )}
 
-                  {/* DETALLE: productos + imágenes */}
+                  {/* Detalle de productos */}
                   {open && (
                     <div
                       className="space-y-3 pt-2 border-t"
@@ -520,19 +525,17 @@ export default function VentasPage() {
                               <ImageOff size={20} />
                             </div>
                           )}
-
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{i.product_name}</p>
                             <p className="text-xs text-muted">
                               {i.qty} × Q{i.unit_price.toFixed(2)} ={" "}
-                              <span className="font-medium">Q{(i.qty * i.unit_price).toFixed(2)}</span>
+                              <span className="font-semibold">Q{(i.qty * i.unit_price).toFixed(2)}</span>
                             </p>
                           </div>
                         </div>
                       ))}
-
                       {s.dtf_cost > 0 && (
-                        <p className="text-xs text-muted pt-1">
+                        <p className="text-xs text-muted">
                           Costo DTF: − Q{s.dtf_cost.toFixed(2)}
                         </p>
                       )}
@@ -550,27 +553,35 @@ export default function VentasPage() {
 }
 
 /* =====================
-   FIN STAT — fila inline de cifras
+   MINI STAT — tile financiero dentro de una venta
 ===================== */
 
-function FinStat({
+function MiniStat({
   label,
   value,
   icon,
   colorClass,
+  gated,
 }: {
   label: string;
   value: string;
   icon?: React.ReactNode;
+  bold?: boolean;
   colorClass?: string;
+  gated?: boolean;
 }) {
+  const cls = `font-bold text-sm ${colorClass ?? ""}`;
   return (
-    <span className="text-sm">
-      <span className="text-xs text-muted">
-        {icon && <span className="inline-flex align-middle mr-0.5">{icon}</span>}
-        {label}{" "}
-      </span>
-      <span className={`font-semibold ${colorClass ?? ""}`}>{value}</span>
-    </span>
+    <div className="card-soft rounded-xl px-3 py-2">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted mb-0.5">
+        {icon}
+        {label}
+      </div>
+      {gated ? (
+        <ProfitValue value={value} className={cls} />
+      ) : (
+        <p className={cls}>{value}</p>
+      )}
+    </div>
   );
 }
