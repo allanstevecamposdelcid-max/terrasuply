@@ -295,14 +295,12 @@ export default function VentasPage() {
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
             const finalizado = s.status === "enviado";
-            const borderColor = finalizado ? "rgb(var(--accent))" : "rgb(var(--muted))";
             const headerBg = finalizado ? "rgb(var(--accent) / 0.07)" : "rgb(var(--muted) / 0.06)";
 
             return (
               <div
                 key={s.id}
                 className="card overflow-hidden p-0"
-                style={{ borderLeftWidth: "3px", borderLeftColor: borderColor }}
               >
                 {/* ── ENCABEZADO con tinte de color ── */}
                 <div
