@@ -134,7 +134,8 @@ export default function VentasPage() {
   }
 
   function getSaldoPendiente(sale: Sale) {
-    return Math.max(sale.total - (sale.advance_payment || 0) - (sale.shipping_cost || 0), 0);
+    const totalNeto = sale.total - (sale.shipping_cost || 0);
+    return Math.max(totalNeto - (sale.advance_payment || 0), 0);
   }
 
   /* =====================
@@ -371,15 +372,11 @@ export default function VentasPage() {
 
                   {/* Métricas financieras */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <MiniStat label="Total" value={`Q${s.total.toFixed(2)}`} bold />
-                    {tieneEnvio && (
-                      <MiniStat
-                        label="Envío"
-                        value={`− Q${s.shipping_cost.toFixed(2)}`}
-                        icon={<Truck size={10} />}
-                        colorClass="text-muted"
-                      />
-                    )}
+                    <MiniStat
+                      label={tieneEnvio ? "Total (− envío)" : "Total"}
+                      value={`Q${(s.total - (s.shipping_cost || 0)).toFixed(2)}`}
+                      bold
+                    />
                     {tieneAnticipo && (
                       <>
                         <MiniStat
