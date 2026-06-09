@@ -56,7 +56,7 @@ export default function NuevaVentaPage() {
   const [description, setDescription] = useState("");
 
   const [dtfCost, setDtfCost] = useState(0);
-  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingPct, setShippingPct] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -185,6 +185,7 @@ export default function NuevaVentaPage() {
   }
 
   const total = cart.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
+  const shippingCost = total * (shippingPct || 0) / 100;
   const saldoPendiente = Math.max(total - (advancePayment || 0), 0);
 
   async function saveSale() {
@@ -481,16 +482,24 @@ export default function NuevaVentaPage() {
             <label className="text-sm font-medium">Paquetería / Envío</label>
             <div className="flex gap-2 items-center">
               <Truck size={16} />
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="input input-bordered w-full"
-                value={shippingCost}
-                onChange={(e) => setShippingCost(Number(e.target.value))}
-                placeholder="Q0.00"
-              />
+              <div className="flex items-center input input-bordered w-full gap-1 px-3">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="1"
+                  style={{ background: "transparent", border: "none", outline: "none", padding: 0 }}
+                  className="w-full text-sm"
+                  value={shippingPct || ""}
+                  onChange={(e) => setShippingPct(Number(e.target.value))}
+                  placeholder="0"
+                />
+                <span className="text-muted text-sm shrink-0">%</span>
+              </div>
             </div>
+            {shippingPct > 0 && (
+              <p className="text-xs text-muted">= Q{shippingCost.toFixed(2)}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -519,8 +528,8 @@ export default function NuevaVentaPage() {
 
           {shippingCost > 0 && (
             <div className="flex justify-between text-sm text-muted">
-              <span>Paquetería / Envío</span>
-              <span>− Q{Number(shippingCost).toFixed(2)}</span>
+              <span>Paquetería / Envío ({shippingPct}%)</span>
+              <span>− Q{shippingCost.toFixed(2)}</span>
             </div>
           )}
 
