@@ -134,13 +134,6 @@ export default function InventarioPage() {
             return (
               <div key={p.id} className="card overflow-hidden flex flex-col">
 
-                {/* Franja de stock (color según nivel) */}
-                <div
-                  className={`h-0.5 ${
-                    sinStock ? "bg-red-500" : stockBajo ? "bg-yellow-400" : "bg-green-500"
-                  }`}
-                />
-
                 <div className="flex-1 p-4 space-y-4">
                   {/* ENCABEZADO DE TARJETA */}
                   <div className="flex items-start gap-3">

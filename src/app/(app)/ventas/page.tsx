@@ -319,18 +319,19 @@ export default function VentasPage() {
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
             const finalizado = s.status === "enviado";
-            const accentRgb = finalizado ? "34 197 94" : "234 179 8";
+            const borderColor = finalizado ? "rgb(var(--accent))" : "rgb(var(--muted))";
+            const headerBg = finalizado ? "rgb(var(--accent) / 0.07)" : "rgb(var(--muted) / 0.06)";
 
             return (
               <div
                 key={s.id}
                 className="card overflow-hidden p-0"
-                style={{ borderLeftWidth: "3px", borderLeftColor: `rgb(${accentRgb})` }}
+                style={{ borderLeftWidth: "3px", borderLeftColor: borderColor }}
               >
                 {/* ── ENCABEZADO con tinte de color ── */}
                 <div
                   className="px-4 pt-4 pb-3"
-                  style={{ background: `rgb(${accentRgb} / 0.07)` }}
+                  style={{ background: headerBg }}
                 >
                   <div className="flex items-start gap-3">
                     {/* Nombre + info de contacto */}
