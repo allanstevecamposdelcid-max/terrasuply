@@ -113,7 +113,7 @@ export default function DashboardPage() {
   ====================== */
 
   const totalVentas = useMemo(
-    () => salesFiltradas.reduce((sum, s) => sum + s.total, 0),
+    () => salesFiltradas.reduce((sum, s) => sum + (s.advance_payment || 0), 0),
     [salesFiltradas]
   );
 
@@ -121,7 +121,7 @@ export default function DashboardPage() {
     () =>
       salesFiltradas
         .filter((s) => s.status === "pendiente")
-        .reduce((sum, s) => sum + s.total, 0),
+        .reduce((sum, s) => sum + (s.advance_payment || 0), 0),
     [salesFiltradas]
   );
 
@@ -129,7 +129,7 @@ export default function DashboardPage() {
     () =>
       salesFiltradas
         .filter((s) => s.status === "enviado")
-        .reduce((sum, s) => sum + s.total, 0),
+        .reduce((sum, s) => sum + (s.advance_payment || 0), 0),
     [salesFiltradas]
   );
 
@@ -158,13 +158,8 @@ export default function DashboardPage() {
     [expenses, from, to]
   );
 
-  const totalAnticipo = useMemo(
-    () => salesFiltradas.reduce((sum, s) => sum + (s.advance_payment || 0), 0),
-    [salesFiltradas]
-  );
-
   const ganancia =
-    totalAnticipo - costoProductos - dtfTotal - gastos;
+    totalVentas - costoProductos - dtfTotal - gastos;
 
   /* ======================
      UI

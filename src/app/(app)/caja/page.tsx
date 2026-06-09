@@ -101,7 +101,7 @@ export default function CajaPage() {
   ===================== */
 
   const ingresos = useMemo(
-    () => sales.reduce((sum, s) => sum + s.total, 0),
+    () => sales.reduce((sum, s) => sum + (s.advance_payment || 0), 0),
     [sales]
   );
 
@@ -134,13 +134,8 @@ export default function CajaPage() {
     [expenses]
   );
 
-  const totalAnticipo = useMemo(
-    () => sales.reduce((sum, s) => sum + (s.advance_payment || 0), 0),
-    [sales]
-  );
-
   const ganancia =
-    totalAnticipo - costoProductos - dtfTotal - gastos;
+    ingresos - costoProductos - dtfTotal - gastos;
 
   /* =====================
      ACTIONS
