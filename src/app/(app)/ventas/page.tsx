@@ -17,6 +17,7 @@ import {
   Search,
   FileText,
   Package,
+  Truck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
@@ -296,6 +297,7 @@ export default function VentasPage() {
             const profit = getProfit(s);
             const saldo = getSaldoPendiente(s);
             const tieneAnticipo = (s.advance_payment || 0) > 0;
+            const tieneEnvio = (s.shipping_cost || 0) > 0;
             const finalizado = s.status === "enviado";
             const headerBg = finalizado ? "rgb(var(--accent) / 0.07)" : "rgb(var(--muted) / 0.06)";
 
@@ -368,8 +370,16 @@ export default function VentasPage() {
                 <div className="px-4 pb-4 pt-3 space-y-3">
 
                   {/* Métricas financieras */}
-                  <div className={`grid gap-2 ${tieneAnticipo ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <MiniStat label="Total" value={`Q${s.total.toFixed(2)}`} bold />
+                    {tieneEnvio && (
+                      <MiniStat
+                        label="Envío"
+                        value={`− Q${s.shipping_cost.toFixed(2)}`}
+                        icon={<Truck size={10} />}
+                        colorClass="text-muted"
+                      />
+                    )}
                     {tieneAnticipo && (
                       <>
                         <MiniStat
