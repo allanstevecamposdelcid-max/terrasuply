@@ -14,6 +14,7 @@ import {
   ImagePlus,
   X,
   Loader2,
+  Truck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -55,6 +56,7 @@ export default function NuevaVentaPage() {
   const [description, setDescription] = useState("");
 
   const [dtfCost, setDtfCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -223,6 +225,7 @@ export default function NuevaVentaPage() {
       p_dtf_cost: dtfCost,
       p_advance_payment: advancePayment || 0,
       p_description: description || null,
+      p_shipping_cost: shippingCost || 0,
     });
 
     setLoading(false);
@@ -457,12 +460,10 @@ export default function NuevaVentaPage() {
           </div>
         )}
 
-        {/* DTF + ANTICIPO */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* DTF + ENVÍO + ANTICIPO */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Costo DTF (no afecta el total)
-            </label>
+            <label className="text-sm font-medium">Costo DTF</label>
             <div className="flex gap-2 items-center">
               <DollarSign size={16} />
               <input
@@ -477,9 +478,23 @@ export default function NuevaVentaPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Anticipo recibido
-            </label>
+            <label className="text-sm font-medium">Paquetería / Envío</label>
+            <div className="flex gap-2 items-center">
+              <Truck size={16} />
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="input input-bordered w-full"
+                value={shippingCost}
+                onChange={(e) => setShippingCost(Number(e.target.value))}
+                placeholder="Q0.00"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Anticipo recibido</label>
             <div className="flex gap-2 items-center">
               <Wallet size={16} />
               <input
@@ -492,9 +507,6 @@ export default function NuevaVentaPage() {
                 placeholder="Q0.00"
               />
             </div>
-            <p className="text-xs text-muted">
-              Si el cliente no paga el total, registra aquí el adelanto entregado.
-            </p>
           </div>
         </div>
 
@@ -504,6 +516,13 @@ export default function NuevaVentaPage() {
             <span>Total</span>
             <span>Q{total.toFixed(2)}</span>
           </div>
+
+          {shippingCost > 0 && (
+            <div className="flex justify-between text-sm text-muted">
+              <span>Paquetería / Envío</span>
+              <span>− Q{Number(shippingCost).toFixed(2)}</span>
+            </div>
+          )}
 
           {advancePayment > 0 && (
             <>

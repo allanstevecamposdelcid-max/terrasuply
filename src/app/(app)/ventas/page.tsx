@@ -41,6 +41,7 @@ type Sale = {
   description: string | null;
   total: number;
   dtf_cost: number;
+  shipping_cost: number;
   advance_payment: number;
   status: "pendiente" | "enviado";
   created_at: string;
@@ -91,6 +92,7 @@ export default function VentasPage() {
         description,
         total,
         dtf_cost,
+        shipping_cost,
         advance_payment,
         status,
         created_at,
@@ -127,7 +129,7 @@ export default function VentasPage() {
       (sum, i) => sum + i.unit_cost * i.qty,
       0
     );
-    return sale.total - costos - sale.dtf_cost;
+    return sale.total - costos - sale.dtf_cost - (sale.shipping_cost || 0);
   }
 
   function getSaldoPendiente(sale: Sale) {
