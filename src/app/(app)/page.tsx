@@ -67,6 +67,10 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<LowStockProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [atrasadosExpanded, setAtrasadosExpanded] = useState(false);
+  const [dtfExpanded, setDtfExpanded] = useState(false);
+  const [stockExpanded, setStockExpanded] = useState(false);
+
   // 🔥 FILTRO FECHA
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -257,7 +261,7 @@ export default function DashboardPage() {
                 {pedidosAtrasados.length !== 1 ? "s" : ""}
               </div>
               <ul className="text-sm space-y-1">
-                {pedidosAtrasados.slice(0, 5).map((s) => (
+                {(atrasadosExpanded ? pedidosAtrasados : pedidosAtrasados.slice(0, 5)).map((s) => (
                   <li key={s.id} className="flex justify-between gap-3 text-muted">
                     <span className="truncate">{s.customer_name}</span>
                     <span className="shrink-0">
@@ -271,9 +275,15 @@ export default function DashboardPage() {
                 ))}
               </ul>
               {pedidosAtrasados.length > 5 && (
-                <p className="text-xs text-muted">
-                  +{pedidosAtrasados.length - 5} más…
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setAtrasadosExpanded((v) => !v)}
+                  className="text-xs font-medium text-red-600 hover:underline"
+                >
+                  {atrasadosExpanded
+                    ? "Ver menos"
+                    : `+${pedidosAtrasados.length - 5} más…`}
+                </button>
               )}
               <Link href="/ventas" className="text-xs font-medium text-accent">
                 Ver en Ventas →
@@ -290,16 +300,20 @@ export default function DashboardPage() {
                 (+2 días)
               </div>
               <ul className="text-sm space-y-1">
-                {dtfSinRegistrar.slice(0, 5).map((s) => (
+                {(dtfExpanded ? dtfSinRegistrar : dtfSinRegistrar.slice(0, 5)).map((s) => (
                   <li key={s.id} className="text-muted truncate">
                     {s.customer_name}
                   </li>
                 ))}
               </ul>
               {dtfSinRegistrar.length > 5 && (
-                <p className="text-xs text-muted">
-                  +{dtfSinRegistrar.length - 5} más…
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setDtfExpanded((v) => !v)}
+                  className="text-xs font-medium text-yellow-600 hover:underline"
+                >
+                  {dtfExpanded ? "Ver menos" : `+${dtfSinRegistrar.length - 5} más…`}
+                </button>
               )}
               <Link href="/ventas" className="text-xs font-medium text-accent">
                 Ver en Ventas →
@@ -315,7 +329,7 @@ export default function DashboardPage() {
                 stock bajo
               </div>
               <ul className="text-sm space-y-1">
-                {stockBajo.slice(0, 5).map((p) => (
+                {(stockExpanded ? stockBajo : stockBajo.slice(0, 5)).map((p) => (
                   <li key={p.id} className="flex justify-between gap-3 text-muted">
                     <span className="truncate">{p.name}</span>
                     <span className="shrink-0">
@@ -325,7 +339,13 @@ export default function DashboardPage() {
                 ))}
               </ul>
               {stockBajo.length > 5 && (
-                <p className="text-xs text-muted">+{stockBajo.length - 5} más…</p>
+                <button
+                  type="button"
+                  onClick={() => setStockExpanded((v) => !v)}
+                  className="text-xs font-medium text-orange-600 hover:underline"
+                >
+                  {stockExpanded ? "Ver menos" : `+${stockBajo.length - 5} más…`}
+                </button>
               )}
               <Link href="/inventario" className="text-xs font-medium text-accent">
                 Ver en Inventario →
