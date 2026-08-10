@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
+import { todayLocalStr, localDateTimeToUtcIso } from "@/lib/date";
 
 /* =====================
    TYPES
@@ -44,9 +45,7 @@ export default function CajaPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [date, setDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [date, setDate] = useState(todayLocalStr());
 
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState<number | "">("");
@@ -70,8 +69,8 @@ export default function CajaPage() {
           unit_cost
         )
       `)
-      .gte("created_at", `${date}T00:00:00`)
-      .lte("created_at", `${date}T23:59:59`);
+      .gte("created_at", localDateTimeToUtcIso(date, "00:00:00"))
+      .lte("created_at", localDateTimeToUtcIso(date, "23:59:59.999"));
 
     const { data: expensesData, error: expensesError } =
       await supabase

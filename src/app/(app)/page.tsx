@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
-import { todayLocalStr } from "@/lib/date";
+import { todayLocalStr, isoToLocalDateStr } from "@/lib/date";
 
 /* ======================
    TYPES
@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
   const salesFiltradas = useMemo(() => {
     return sales.filter((s) => {
-      const d = s.created_at.slice(0, 10);
+      const d = isoToLocalDateStr(s.created_at);
 
       if (from && d < from) return false;
       if (to && d > to) return false;
