@@ -13,6 +13,7 @@ import {
   Boxes,
   AlertTriangle,
   Store,
+  Receipt,
   X,
 } from "lucide-react";
 
@@ -44,6 +45,7 @@ export default function InventarioPage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [supplierReportFor, setSupplierReportFor] = useState<string | null>(null);
 
   /* ===== LOAD ===== */
 
@@ -96,9 +98,19 @@ export default function InventarioPage() {
           <h1 className="text-2xl font-semibold">Inventario</h1>
           <p className="text-sm text-muted">Productos disponibles para la venta</p>
         </div>
-        <span className="text-sm text-muted">
-          {!loading && `${items.length} producto${items.length !== 1 ? "s" : ""}`}
-        </span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-sm text-muted">
+            {!loading && `${items.length} producto${items.length !== 1 ? "s" : ""}`}
+          </span>
+          <button
+            onClick={() => setSupplierReportFor("")}
+            className="btn btn-ghost btn-sm card-soft flex items-center gap-1.5"
+            title="Ver el costo de lo vendido por proveedor"
+          >
+            <Receipt size={15} />
+            <span className="hidden sm:inline">Venta de proveedor</span>
+          </button>
+        </div>
       </div>
 
       {/* BÚSQUEDA */}
@@ -150,10 +162,14 @@ export default function InventarioPage() {
                         </div>
                       )}
                       {p.supplier && (
-                        <div className="flex items-center gap-1 text-xs text-muted mt-0.5">
+                        <button
+                          onClick={() => setSupplierReportFor(p.supplier)}
+                          className="flex items-center gap-1 text-xs text-muted hover:text-accent transition mt-0.5"
+                          title="Ver venta de este proveedor"
+                        >
                           <Store size={11} />
-                          <span className="truncate">{p.supplier}</span>
-                        </div>
+                          <span className="truncate underline decoration-dotted">{p.supplier}</span>
+                        </button>
                       )}
                     </div>
 
@@ -240,6 +256,13 @@ export default function InventarioPage() {
           product={editing}
           onClose={() => { setOpenEdit(false); setEditing(null); }}
           onSaved={() => { setOpenEdit(false); setEditing(null); load(); }}
+        />
+      )}
+
+      {supplierReportFor !== null && (
+        <SupplierSalesModal
+          initialSupplier={supplierReportFor}
+          onClose={() => setSupplierReportFor(null)}
         />
       )}
     </div>
@@ -534,5 +557,171 @@ function ProductForm({
         </div>
       </div>
     </div>
+  );
+}
+
+/* =====================
+   VENTA DE PROVEEDOR
+   Suma el costo (qty × costo unitario al momento de la venta)
+   de todo lo vendido de los productos de un proveedor.
+===================== */
+
+type SupplierSaleLine = {
+  product_id: string;
+  product_name: string;
+  qty: number;
+  subtotal: number;
+};
+
+function SupplierSalesModal({
+  initialSupplier,
+  onClose,
+}: {
+  initialSupplier: string;
+  onClose: () => void;
+}) {
+  const [suppliers, setSuppliers] = useState<string[]>([]);
+  const [supplier, setSupplier] = useState(initialSupplier);
+  const [lines, setLines] = useState<SupplierSaleLine[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadSuppliers() {
+      const { data } = await supabase
+        .from("products")
+        .select("supplier")
+        .not("supplier", "is", null);
+      const unique = Array.from(
+        new Set((data || []).map((d) => (d.supplier as string).trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+      setSuppliers(unique);
+    }
+    loadSuppliers();
+  }, []);
+
+  useEffect(() => {
+    if (!supplier) {
+      setLines([]);
+      setLoaded(false);
+      return;
+    }
+
+    async function loadReport() {
+      setLoading(true);
+      setLoaded(false);
+
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id,name")
+        .eq("supplier", supplier);
+
+      const ids = (prods || []).map((p) => p.id as string);
+
+      if (ids.length === 0) {
+        setLines([]);
+        setLoading(false);
+        setLoaded(true);
+        return;
+      }
+
+      const { data: items } = await supabase
+        .from("sale_items")
+        .select("product_id,qty,unit_cost")
+        .in("product_id", ids);
+
+      const nameById = new Map((prods || []).map((p) => [p.id, p.name as string]));
+      const byProduct = new Map<string, { qty: number; subtotal: number }>();
+
+      (items || []).forEach((i) => {
+        const key = i.product_id as string;
+        const prev = byProduct.get(key) || { qty: 0, subtotal: 0 };
+        byProduct.set(key, {
+          qty: prev.qty + i.qty,
+          subtotal: prev.subtotal + i.qty * i.unit_cost,
+        });
+      });
+
+      const result = Array.from(byProduct.entries())
+        .map(([product_id, v]) => ({
+          product_id,
+          product_name: nameById.get(product_id) || "—",
+          qty: v.qty,
+          subtotal: v.subtotal,
+        }))
+        .sort((a, b) => b.subtotal - a.subtotal);
+
+      setLines(result);
+      setLoading(false);
+      setLoaded(true);
+    }
+
+    loadReport();
+  }, [supplier]);
+
+  const total = lines.reduce((sum, l) => sum + l.subtotal, 0);
+
+  return (
+    <Modal title="Venta de proveedor" onClose={onClose}>
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Proveedor</label>
+        <select
+          className="input input-bordered w-full"
+          value={supplier}
+          onChange={(e) => setSupplier(e.target.value)}
+        >
+          <option value="">Selecciona un proveedor…</option>
+          {suppliers.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+
+        {loading && (
+          <p className="text-sm text-muted text-center py-4">Calculando…</p>
+        )}
+
+        {!loading && loaded && lines.length === 0 && (
+          <p className="text-sm text-muted text-center py-4">
+            Este proveedor todavía no tiene ventas registradas.
+          </p>
+        )}
+
+        {!loading && lines.length > 0 && (
+          <div className="space-y-2">
+            {lines.map((l) => (
+              <div
+                key={l.product_id}
+                className="flex items-center justify-between gap-3 text-sm card-soft rounded-xl px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{l.product_name}</p>
+                  <p className="text-xs text-muted">
+                    {l.qty} unidad{l.qty !== 1 ? "es" : ""} · Q
+                    {(l.subtotal / l.qty).toFixed(2)} c/u
+                  </p>
+                </div>
+                <p className="font-semibold shrink-0">Q{l.subtotal.toFixed(2)}</p>
+              </div>
+            ))}
+
+            <div
+              className="flex items-center justify-between pt-3 border-t font-bold text-base"
+              style={{ borderColor: "rgb(var(--border))" }}
+            >
+              <span>Total</span>
+              <span>Q{total.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <button className="btn btn-ghost flex-1" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
+    </Modal>
   );
 }
