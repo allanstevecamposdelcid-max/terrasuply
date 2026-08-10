@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Search,
@@ -493,6 +493,25 @@ function ProductForm({
   cost: NumField; setCost: (v: NumField) => void;
   price: NumField; setPrice: (v: NumField) => void;
 }) {
+  const [supplierOpen, setSupplierOpen] = useState(false);
+  const supplierRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (supplierRef.current && !supplierRef.current.contains(e.target as Node)) {
+        setSupplierOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredSuppliers = supplier.trim()
+    ? knownSuppliers.filter((s) =>
+        s.toLowerCase().includes(supplier.trim().toLowerCase())
+      )
+    : knownSuppliers;
+
   function asNumber(raw: string): NumField {
     return raw === "" ? "" : Number(raw);
   }
@@ -519,21 +538,38 @@ function ProductForm({
         />
       </div>
 
-      <div className="flex gap-2 items-center">
-        <Store size={16} className="text-muted shrink-0" />
-        <input
-          className="input input-bordered w-full"
-          placeholder="Proveedor / tienda (opcional)"
-          value={supplier}
-          onChange={(e) => setSupplier(e.target.value)}
-          list="known-suppliers"
-          autoComplete="off"
-        />
-        <datalist id="known-suppliers">
-          {knownSuppliers.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
+      <div ref={supplierRef}>
+        <div className="flex gap-2 items-center">
+          <Store size={16} className="text-muted shrink-0" />
+          <input
+            className="input input-bordered w-full"
+            placeholder="Proveedor / tienda (opcional)"
+            value={supplier}
+            onChange={(e) => {
+              setSupplier(e.target.value);
+              setSupplierOpen(true);
+            }}
+            onFocus={() => setSupplierOpen(true)}
+            autoComplete="off"
+          />
+        </div>
+        {supplierOpen && filteredSuppliers.length > 0 && (
+          <div className="mt-1.5 ml-6 border rounded-xl bg-base-100 shadow max-h-40 overflow-auto">
+            {filteredSuppliers.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  setSupplier(s);
+                  setSupplierOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm border-b last:border-b-0 hover:bg-base-200"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
