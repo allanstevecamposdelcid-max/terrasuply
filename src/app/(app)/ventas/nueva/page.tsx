@@ -64,7 +64,19 @@ export default function NuevaVentaPage() {
   const [otherSuppliesCost, setOtherSuppliesCost] = useState(0);
   const [shippingPct, setShippingPct] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
-  const [deliveryDate, setDeliveryDate] = useState<string>(() => addDaysLocalStr(5));
+  // Arranca en UTC (igual en servidor y navegador, sin desajuste de
+  // hidratación) y se corrige a +5 días locales apenas monta en el
+  // navegador, que es quien conoce la zona horaria real.
+  const [deliveryDate, setDeliveryDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 5);
+    return d.toISOString().slice(0, 10);
+  });
+
+  useEffect(() => {
+    setDeliveryDate(addDaysLocalStr(5));
+  }, []);
+
   const [loading, setLoading] = useState(false);
 
   async function loadProducts(q = "") {

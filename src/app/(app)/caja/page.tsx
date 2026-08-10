@@ -45,7 +45,14 @@ export default function CajaPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [date, setDate] = useState(todayLocalStr());
+  // Arranca con la fecha UTC (igual en servidor y navegador, sin
+  // desajuste de hidratación) y se corrige a la fecha local apenas
+  // monta en el navegador, que es quien conoce la zona horaria real.
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  useEffect(() => {
+    setDate(todayLocalStr());
+  }, []);
 
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState<number | "">("");

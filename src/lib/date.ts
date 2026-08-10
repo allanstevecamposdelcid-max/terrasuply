@@ -1,24 +1,26 @@
 /**
- * Fecha local en formato YYYY-MM-DD.
- * `toISOString()` solo se usa aquí después de compensar el offset de
- * zona horaria del navegador — usarlo directo sobre `new Date()` da la
- * fecha en UTC, que en Guatemala (UTC-6) ya es "mañana" desde las 6pm
- * hora local, adelantando el marcado de "atrasado" y el cálculo de
- * fecha de entrega por defecto varias horas antes de tiempo.
+ * Corrige un Date al equivalente de "misma hora, pero en UTC" según el
+ * offset de zona horaria del navegador. `toISOString()` sobre un Date
+ * sin corregir da la fecha en UTC, que en Guatemala (UTC-6) ya es
+ * "mañana" desde las 6pm hora local — esto adelantaba el marcado de
+ * "atrasado" y la fecha de entrega por defecto varias horas antes de
+ * tiempo. Todas las funciones de este archivo pasan por acá para que
+ * la corrección viva en un solo lugar.
  */
-export function todayLocalStr(): string {
-  const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 10);
+function shiftToLocal(d: Date): Date {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000);
 }
 
+/** Fecha local (del navegador) en formato YYYY-MM-DD. */
+export function todayLocalStr(): string {
+  return shiftToLocal(new Date()).toISOString().slice(0, 10);
+}
+
+/** Fecha local, `days` días a partir de hoy, en formato YYYY-MM-DD. */
 export function addDaysLocalStr(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 10);
+  return shiftToLocal(d).toISOString().slice(0, 10);
 }
 
 /**
@@ -29,10 +31,7 @@ export function addDaysLocalStr(days: number): string {
  * hechos después de las 6pm hora Guatemala.
  */
 export function isoToLocalDateStr(iso: string): string {
-  const d = new Date(iso);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 10);
+  return shiftToLocal(new Date(iso)).toISOString().slice(0, 10);
 }
 
 /**
@@ -40,7 +39,10 @@ export function isoToLocalDateStr(iso: string): string {
  * real, para usar en filtros `gte`/`lte` contra columnas timestamptz.
  * `new Date("YYYY-MM-DDTHH:mm:ss")` sin sufijo de zona ya se interpreta
  * como hora local del navegador, así que solo hace falta `toISOString()`.
+ * Si `dateStr` viene vacío (ej. el usuario borró el campo de fecha),
+ * usa hoy en vez de construir un Invalid Date que rompería `.toISOString()`.
  */
 export function localDateTimeToUtcIso(dateStr: string, time: string): string {
-  return new Date(`${dateStr}T${time}`).toISOString();
+  const safeDate = dateStr || todayLocalStr();
+  return new Date(`${safeDate}T${time}`).toISOString();
 }

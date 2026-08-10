@@ -46,6 +46,7 @@ export default function InventarioPage() {
   const [openEdit, setOpenEdit] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [supplierReportFor, setSupplierReportFor] = useState<string | null>(null);
+  const [knownSuppliers, setKnownSuppliers] = useState<string[]>([]);
 
   /* ===== LOAD ===== */
 
@@ -69,7 +70,24 @@ export default function InventarioPage() {
     setItems((data as Product[]) || []);
   }
 
-  useEffect(() => { load(); }, []);
+  // Independiente del buscador `q`: se usa para sugerir proveedores ya
+  // usados al crear/editar un producto, sin importar el filtro actual.
+  async function loadSuppliers() {
+    const { data } = await supabase
+      .from("products")
+      .select("supplier")
+      .not("supplier", "is", null);
+    const unique = Array.from(
+      new Set(
+        (data || [])
+          .map((d) => (d.supplier as string).trim())
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+    setKnownSuppliers(unique);
+  }
+
+  useEffect(() => { load(); loadSuppliers(); }, []);
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
@@ -246,16 +264,18 @@ export default function InventarioPage() {
 
       {openCreate && (
         <CreateProductModal
+          knownSuppliers={knownSuppliers}
           onClose={() => setOpenCreate(false)}
-          onCreated={() => { setOpenCreate(false); load(); }}
+          onCreated={() => { setOpenCreate(false); load(); loadSuppliers(); }}
         />
       )}
 
       {openEdit && editing && (
         <EditProductModal
           product={editing}
+          knownSuppliers={knownSuppliers}
           onClose={() => { setOpenEdit(false); setEditing(null); }}
-          onSaved={() => { setOpenEdit(false); setEditing(null); load(); }}
+          onSaved={() => { setOpenEdit(false); setEditing(null); load(); loadSuppliers(); }}
         />
       )}
 
@@ -274,9 +294,11 @@ export default function InventarioPage() {
 ===================== */
 
 function CreateProductModal({
+  knownSuppliers,
   onClose,
   onCreated,
 }: {
+  knownSuppliers: string[];
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -313,6 +335,7 @@ function CreateProductModal({
         name={name} setName={setName}
         sku={sku} setSku={setSku}
         supplier={supplier} setSupplier={setSupplier}
+        knownSuppliers={knownSuppliers}
         stock={stock} setStock={setStock}
         minStock={minStock} setMinStock={setMinStock}
         cost={cost} setCost={setCost}
@@ -329,10 +352,12 @@ function CreateProductModal({
 
 function EditProductModal({
   product,
+  knownSuppliers,
   onClose,
   onSaved,
 }: {
   product: Product;
+  knownSuppliers: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -370,6 +395,7 @@ function EditProductModal({
         name={name} setName={setName}
         sku={sku} setSku={setSku}
         supplier={supplier} setSupplier={setSupplier}
+        knownSuppliers={knownSuppliers}
         stock={stock} setStock={setStock}
         minStock={minStock} setMinStock={setMinStock}
         cost={cost} setCost={setCost}
@@ -452,6 +478,7 @@ function ProductForm({
   name, setName,
   sku, setSku,
   supplier, setSupplier,
+  knownSuppliers,
   stock, setStock,
   minStock, setMinStock,
   cost, setCost,
@@ -460,6 +487,7 @@ function ProductForm({
   name: string; setName: (v: string) => void;
   sku: string; setSku: (v: string) => void;
   supplier: string; setSupplier: (v: string) => void;
+  knownSuppliers: string[];
   stock: NumField; setStock: (v: NumField) => void;
   minStock: NumField; setMinStock: (v: NumField) => void;
   cost: NumField; setCost: (v: NumField) => void;
@@ -498,7 +526,14 @@ function ProductForm({
           placeholder="Proveedor / tienda (opcional)"
           value={supplier}
           onChange={(e) => setSupplier(e.target.value)}
+          list="known-suppliers"
+          autoComplete="off"
         />
+        <datalist id="known-suppliers">
+          {knownSuppliers.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
