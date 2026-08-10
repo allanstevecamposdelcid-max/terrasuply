@@ -19,12 +19,7 @@ const navItems = [
   { href: "/ventas/nueva", label: "Nueva venta", icon: Plus },
   { href: "/inventario", label: "Inventario", icon: Boxes },
   { href: "/caja", label: "Caja", icon: Wallet },
-  {
-    href: "https://trackingt.github.io/order-tracking/admin.html",
-    label: "Seguimiento pedidos",
-    icon: Truck,
-    external: true,
-  },
+  { href: "/seguimiento", label: "Seguimiento pedidos", icon: Truck },
 ];
 
 interface AppSidebarProps {
@@ -43,11 +38,10 @@ function NavList({
 
   return (
     <nav className="px-2 py-2 space-y-0.5">
-      {navItems.map(({ href, label, icon: Icon, external }) => {
+      {navItems.map(({ href, label, icon: Icon }) => {
         const active =
-          !external &&
-          (pathname === href ||
-            (href !== "/" && pathname.startsWith(href + "/")));
+          pathname === href ||
+          (href !== "/" && pathname.startsWith(href + "/"));
 
         const cls = `group relative flex items-center gap-3 py-2.5 rounded-xl
           text-sm font-medium transition-all duration-150 cursor-pointer
@@ -76,21 +70,6 @@ function NavList({
             </span>
           </>
         );
-
-        if (external) {
-          return (
-            <a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cls}
-              onClick={onClick}
-            >
-              {content}
-            </a>
-          );
-        }
 
         return (
           <Link key={href} href={href} className={cls} onClick={onClick}>

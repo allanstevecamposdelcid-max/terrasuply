@@ -6,6 +6,7 @@ import {
   User,
   Phone,
   MapPin,
+  Mail,
   Package,
   Save,
   DollarSign,
@@ -15,8 +16,11 @@ import {
   X,
   Loader2,
   Truck,
+  Wrench,
+  Calendar,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { addDaysLocalStr } from "@/lib/date";
 
 /* =====================
    TYPES
@@ -53,11 +57,14 @@ export default function NuevaVentaPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [description, setDescription] = useState("");
 
-  const [dtfCost, setDtfCost] = useState(0);
+  const [dtfCost, setDtfCost] = useState<number | "">("");
+  const [otherSuppliesCost, setOtherSuppliesCost] = useState(0);
   const [shippingPct, setShippingPct] = useState(0);
   const [advancePayment, setAdvancePayment] = useState(0);
+  const [deliveryDate, setDeliveryDate] = useState<string>(() => addDaysLocalStr(5));
   const [loading, setLoading] = useState(false);
 
   async function loadProducts(q = "") {
@@ -223,11 +230,14 @@ export default function NuevaVentaPage() {
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
       p_customer_address: customerAddress || null,
+      p_customer_email: customerEmail || null,
       p_items: items,
-      p_dtf_cost: dtfCost,
+      p_dtf_cost: dtfCost === "" ? null : dtfCost,
       p_advance_payment: advancePayment || 0,
       p_description: description || null,
       p_shipping_cost: shippingCost || 0,
+      p_other_supplies_cost: otherSuppliesCost || 0,
+      p_delivery_date: deliveryDate || null,
     });
 
     setLoading(false);
@@ -276,6 +286,17 @@ export default function NuevaVentaPage() {
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
               placeholder="Dirección (opcional)"
+            />
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <Mail size={16} />
+            <input
+              type="email"
+              className="input input-bordered w-full"
+              value={customerEmail}
+              onChange={(e) => setCustomerEmail(e.target.value)}
+              placeholder="Email (opcional)"
             />
           </div>
         </div>
@@ -462,8 +483,8 @@ export default function NuevaVentaPage() {
           </div>
         )}
 
-        {/* DTF + ENVÍO + ANTICIPO */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* DTF + OTROS INSUMOS + ENVÍO + ANTICIPO */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Costo DTF</label>
             <div className="flex gap-2 items-center">
@@ -474,7 +495,28 @@ export default function NuevaVentaPage() {
                 step="0.01"
                 className="input input-bordered w-full"
                 value={dtfCost}
-                onChange={(e) => setDtfCost(Number(e.target.value))}
+                onChange={(e) =>
+                  setDtfCost(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                placeholder="Sin registrar"
+              />
+            </div>
+            <p className="text-xs text-muted">
+              Déjalo vacío si aún no tienes el costo real del DTF.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Otros insumos</label>
+            <div className="flex gap-2 items-center">
+              <Wrench size={16} />
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="input input-bordered w-full"
+                value={otherSuppliesCost}
+                onChange={(e) => setOtherSuppliesCost(Number(e.target.value))}
               />
             </div>
           </div>
@@ -518,6 +560,24 @@ export default function NuevaVentaPage() {
               />
             </div>
           </div>
+        </div>
+
+        {/* FECHA DE ENTREGA */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Fecha de entrega estimada</label>
+          <div className="flex gap-2 items-center">
+            <Calendar size={16} />
+            <input
+              type="date"
+              className="input input-bordered w-full"
+              value={deliveryDate}
+              onChange={(e) => setDeliveryDate(e.target.value)}
+            />
+          </div>
+          <p className="text-xs text-muted">
+            Por defecto son 5 días desde hoy. Si se pasa esta fecha sin finalizar,
+            el pedido se marcará como atrasado.
+          </p>
         </div>
 
         {/* TOTAL */}

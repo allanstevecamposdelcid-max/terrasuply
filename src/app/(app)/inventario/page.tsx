@@ -11,6 +11,7 @@ import {
   DollarSign,
   Package,
   Boxes,
+  AlertTriangle,
   X,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ type Product = {
   name: string;
   sku: string | null;
   stock: number;
+  min_stock: number;
   cost: number;
   price: number;
   active?: boolean;
@@ -48,7 +50,7 @@ export default function InventarioPage() {
 
     let query = supabase
       .from("products")
-      .select("id,name,sku,stock,cost,price,active")
+      .select("id,name,sku,stock,min_stock,cost,price,active")
       .eq("active", true)
       .order("created_at", { ascending: false });
 
@@ -129,7 +131,7 @@ export default function InventarioPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {items.map((p) => {
             const sinStock = p.stock <= 0;
-            const stockBajo = !sinStock && p.stock <= 3;
+            const stockBajo = !sinStock && p.stock <= p.min_stock;
 
             return (
               <div key={p.id} className="card overflow-hidden flex flex-col">
@@ -182,7 +184,11 @@ export default function InventarioPage() {
                         {p.stock}
                       </p>
                       <p className="text-[10px] text-muted mt-0.5">
-                        {sinStock ? "agotado" : stockBajo ? "stock bajo" : "disponible"}
+                        {sinStock
+                          ? "agotado"
+                          : stockBajo
+                          ? `stock bajo (mín. ${p.min_stock})`
+                          : "disponible"}
                       </p>
                     </div>
 
@@ -246,6 +252,7 @@ function CreateProductModal({
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [stock, setStock] = useState<number | "">("");
+  const [minStock, setMinStock] = useState<number | "">(5);
   const [cost, setCost] = useState<number | "">("");
   const [price, setPrice] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
@@ -257,6 +264,7 @@ function CreateProductModal({
       name: name.trim(),
       sku: sku.trim() || null,
       stock: Number(stock || 0),
+      min_stock: Number(minStock === "" ? 5 : minStock),
       cost: Number(cost || 0),
       price: Number(price || 0),
       active: true,
@@ -272,6 +280,7 @@ function CreateProductModal({
         name={name} setName={setName}
         sku={sku} setSku={setSku}
         stock={stock} setStock={setStock}
+        minStock={minStock} setMinStock={setMinStock}
         cost={cost} setCost={setCost}
         price={price} setPrice={setPrice}
       />
@@ -296,6 +305,7 @@ function EditProductModal({
   const [name, setName] = useState(product.name);
   const [sku, setSku] = useState(product.sku ?? "");
   const [stock, setStock] = useState<number | "">(product.stock);
+  const [minStock, setMinStock] = useState<number | "">(product.min_stock ?? 5);
   const [cost, setCost] = useState<number | "">(product.cost);
   const [price, setPrice] = useState<number | "">(product.price);
   const [saving, setSaving] = useState(false);
@@ -308,6 +318,7 @@ function EditProductModal({
         name: name.trim(),
         sku: sku.trim() || null,
         stock: Number(stock || 0),
+        min_stock: Number(minStock === "" ? 5 : minStock),
         cost: Number(cost || 0),
         price: Number(price || 0),
       })
@@ -323,6 +334,7 @@ function EditProductModal({
         name={name} setName={setName}
         sku={sku} setSku={setSku}
         stock={stock} setStock={setStock}
+        minStock={minStock} setMinStock={setMinStock}
         cost={cost} setCost={setCost}
         price={price} setPrice={setPrice}
       />
@@ -403,12 +415,14 @@ function ProductForm({
   name, setName,
   sku, setSku,
   stock, setStock,
+  minStock, setMinStock,
   cost, setCost,
   price, setPrice,
 }: {
   name: string; setName: (v: string) => void;
   sku: string; setSku: (v: string) => void;
   stock: NumField; setStock: (v: NumField) => void;
+  minStock: NumField; setMinStock: (v: NumField) => void;
   cost: NumField; setCost: (v: NumField) => void;
   price: NumField; setPrice: (v: NumField) => void;
 }) {
@@ -438,7 +452,7 @@ function ProductForm({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <label className="flex items-center gap-1 text-xs text-muted">
             <Boxes size={12} /> Stock
@@ -449,6 +463,19 @@ function ProductForm({
             className="input input-bordered w-full"
             value={stock}
             onChange={(e) => setStock(asNumber(e.target.value))}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="flex items-center gap-1 text-xs text-muted">
+            <AlertTriangle size={12} /> Stock mínimo
+          </label>
+          <input
+            type="number"
+            min={0}
+            className="input input-bordered w-full"
+            value={minStock}
+            onChange={(e) => setMinStock(asNumber(e.target.value))}
           />
         </div>
 

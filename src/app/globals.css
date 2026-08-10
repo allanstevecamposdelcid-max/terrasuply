@@ -123,6 +123,39 @@ textarea:focus {
 }
 
 /* ======================
+   ANIMACIONES — página pública de seguimiento
+   ====================== */
+
+@keyframes ts-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: ts-fade-in 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes ts-pulse-accent {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--accent) / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgb(var(--accent) / 0);
+  }
+}
+
+.animate-pulse-accent {
+  animation: ts-pulse-accent 1.8s ease-in-out infinite;
+}
+
+/* ======================
    MOBILE SAFE AREA
    ====================== */
 

@@ -16,12 +16,7 @@ import {
 
 const menuItems = [
   { href: "/caja", label: "Caja", icon: Wallet },
-  {
-    href: "https://trackingt.github.io/order-tracking/admin.html",
-    label: "Seguimiento pedidos",
-    icon: Truck,
-    external: true,
-  },
+  { href: "/seguimiento", label: "Seguimiento pedidos", icon: Truck },
 ];
 
 export default function MobileBottomNav() {
@@ -69,30 +64,14 @@ export default function MobileBottomNav() {
 
         {/* Sheet items */}
         <div className="px-4 pb-6 space-y-1">
-          {menuItems.map(({ href, label, icon: Icon, external }) => {
-            const active = !external && isActive(href);
+          {menuItems.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href);
             const cls = `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium
               transition-colors duration-150
               ${active
                 ? "bg-green-500/15 text-green-400"
                 : "text-[rgb(var(--text))] hover:bg-[rgb(var(--card-soft))]"
               }`;
-
-            if (external) {
-              return (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cls}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <Icon size={18} strokeWidth={1.8} />
-                  {label}
-                </a>
-              );
-            }
 
             return (
               <Link

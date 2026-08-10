@@ -23,7 +23,8 @@ type SaleItem = {
 
 type Sale = {
   total: number;
-  dtf_cost: number;
+  dtf_cost: number | null;
+  other_supplies_cost: number;
   advance_payment: number;
   sale_items: SaleItem[];
 };
@@ -62,6 +63,7 @@ export default function CajaPage() {
       .select(`
         total,
         dtf_cost,
+        other_supplies_cost,
         advance_payment,
         sale_items (
           qty,
@@ -125,6 +127,15 @@ export default function CajaPage() {
     [sales]
   );
 
+  const otherSuppliesTotal = useMemo(
+    () =>
+      sales.reduce(
+        (sum, s) => sum + (s.other_supplies_cost || 0),
+        0
+      ),
+    [sales]
+  );
+
   const gastos = useMemo(
     () =>
       expenses.reduce(
@@ -135,7 +146,7 @@ export default function CajaPage() {
   );
 
   const ganancia =
-    ingresos - costoProductos - dtfTotal - gastos;
+    ingresos - costoProductos - dtfTotal - otherSuppliesTotal - gastos;
 
   /* =====================
      ACTIONS

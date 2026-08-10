@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import {
   TrendingUp,
   Clock,
@@ -12,9 +13,13 @@ import {
   Sun,
   Shirt,
   Printer,
+  Wrench,
+  AlertTriangle,
+  Boxes,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { ProfitValue } from "@/components/ProfitGate";
+import { todayLocalStr } from "@/lib/date";
 
 /* ======================
    TYPES
@@ -26,9 +31,13 @@ type SaleItem = {
 };
 
 type Sale = {
+  id: string;
+  customer_name: string;
   total: number;
-  dtf_cost: number;
+  dtf_cost: number | null;
+  other_supplies_cost: number;
   advance_payment: number;
+  delivery_date: string | null;
   status: "pendiente" | "enviado";
   created_at: string;
   sale_items: SaleItem[];
@@ -37,6 +46,13 @@ type Sale = {
 type Expense = {
   amount: number;
   expense_date: string;
+};
+
+type LowStockProduct = {
+  id: string;
+  name: string;
+  stock: number;
+  min_stock: number;
 };
 
 /* ======================
@@ -48,6 +64,7 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [products, setProducts] = useState<LowStockProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 🔥 FILTRO FECHA
@@ -55,7 +72,7 @@ export default function DashboardPage() {
   const [to, setTo] = useState<string>("");
 
   // 🔥 ATAJOS
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalStr();
   const monthStart = today.slice(0, 7) + "-01";
 
   /* ======================
@@ -65,26 +82,33 @@ export default function DashboardPage() {
   async function loadData() {
     setLoading(true);
 
-    const { data: salesData } = await supabase
-      .from("sales")
-      .select(`
+    const [
+      { data: salesData },
+      { data: expensesData },
+      { data: productsData },
+    ] = await Promise.all([
+      supabase.from("sales").select(`
+        id,
+        customer_name,
         total,
         dtf_cost,
+        other_supplies_cost,
         advance_payment,
+        delivery_date,
         status,
         created_at,
         sale_items (
           qty,
           unit_cost
         )
-      `);
-
-    const { data: expensesData } = await supabase
-      .from("expenses")
-      .select("amount, expense_date");
+      `),
+      supabase.from("expenses").select("amount, expense_date"),
+      supabase.from("products").select("id,name,stock,min_stock").eq("active", true),
+    ]);
 
     setSales(salesData || []);
     setExpenses(expensesData || []);
+    setProducts(productsData || []);
     setLoading(false);
   }
 
@@ -142,7 +166,12 @@ export default function DashboardPage() {
   );
 
   const dtfTotal = useMemo(
-    () => salesFiltradas.reduce((sum, s) => sum + s.dtf_cost, 0),
+    () => salesFiltradas.reduce((sum, s) => sum + (s.dtf_cost || 0), 0),
+    [salesFiltradas]
+  );
+
+  const otherSuppliesTotal = useMemo(
+    () => salesFiltradas.reduce((sum, s) => sum + (s.other_supplies_cost || 0), 0),
     [salesFiltradas]
   );
 
@@ -159,7 +188,32 @@ export default function DashboardPage() {
   );
 
   const ganancia =
-    totalVentas - costoProductos - dtfTotal - gastos;
+    totalVentas - costoProductos - dtfTotal - otherSuppliesTotal - gastos;
+
+  /* ======================
+     ALERTAS (no dependen del filtro de fecha)
+  ====================== */
+
+  const pedidosAtrasados = useMemo(
+    () =>
+      sales.filter(
+        (s) =>
+          !!s.delivery_date && s.status !== "enviado" && s.delivery_date < today
+      ),
+    [sales, today]
+  );
+
+  const dtfSinRegistrar = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 2);
+    const cutoffIso = cutoff.toISOString();
+    return sales.filter((s) => s.dtf_cost === null && s.created_at <= cutoffIso);
+  }, [sales]);
+
+  const stockBajo = useMemo(
+    () => products.filter((p) => p.stock <= p.min_stock),
+    [products]
+  );
 
   /* ======================
      UI
@@ -188,6 +242,98 @@ export default function DashboardPage() {
           </button>
         )}
       </header>
+
+      {/* ALERTAS */}
+      {(pedidosAtrasados.length > 0 ||
+        dtfSinRegistrar.length > 0 ||
+        stockBajo.length > 0) && (
+        <section className="space-y-3">
+          {pedidosAtrasados.length > 0 && (
+            <div className="card p-4 border-l-4 border-red-500 bg-red-500/5 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-red-600">
+                <AlertTriangle size={18} />
+                {pedidosAtrasados.length} pedido
+                {pedidosAtrasados.length !== 1 ? "s" : ""} atrasado
+                {pedidosAtrasados.length !== 1 ? "s" : ""}
+              </div>
+              <ul className="text-sm space-y-1">
+                {pedidosAtrasados.slice(0, 5).map((s) => (
+                  <li key={s.id} className="flex justify-between gap-3 text-muted">
+                    <span className="truncate">{s.customer_name}</span>
+                    <span className="shrink-0">
+                      Entrega:{" "}
+                      {new Date(s.delivery_date + "T00:00:00").toLocaleDateString(
+                        "es-GT",
+                        { day: "2-digit", month: "short" }
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {pedidosAtrasados.length > 5 && (
+                <p className="text-xs text-muted">
+                  +{pedidosAtrasados.length - 5} más…
+                </p>
+              )}
+              <Link href="/ventas" className="text-xs font-medium text-accent">
+                Ver en Ventas →
+              </Link>
+            </div>
+          )}
+
+          {dtfSinRegistrar.length > 0 && (
+            <div className="card p-4 border-l-4 border-yellow-500 bg-yellow-500/5 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-yellow-600">
+                <Printer size={18} />
+                {dtfSinRegistrar.length} pedido
+                {dtfSinRegistrar.length !== 1 ? "s" : ""} sin costo DTF registrado
+                (+2 días)
+              </div>
+              <ul className="text-sm space-y-1">
+                {dtfSinRegistrar.slice(0, 5).map((s) => (
+                  <li key={s.id} className="text-muted truncate">
+                    {s.customer_name}
+                  </li>
+                ))}
+              </ul>
+              {dtfSinRegistrar.length > 5 && (
+                <p className="text-xs text-muted">
+                  +{dtfSinRegistrar.length - 5} más…
+                </p>
+              )}
+              <Link href="/ventas" className="text-xs font-medium text-accent">
+                Ver en Ventas →
+              </Link>
+            </div>
+          )}
+
+          {stockBajo.length > 0 && (
+            <div className="card p-4 border-l-4 border-orange-500 bg-orange-500/5 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-orange-600">
+                <Boxes size={18} />
+                {stockBajo.length} producto{stockBajo.length !== 1 ? "s" : ""} con
+                stock bajo
+              </div>
+              <ul className="text-sm space-y-1">
+                {stockBajo.slice(0, 5).map((p) => (
+                  <li key={p.id} className="flex justify-between gap-3 text-muted">
+                    <span className="truncate">{p.name}</span>
+                    <span className="shrink-0">
+                      {p.stock} / mín. {p.min_stock}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {stockBajo.length > 5 && (
+                <p className="text-xs text-muted">+{stockBajo.length - 5} más…</p>
+              )}
+              <Link href="/inventario" className="text-xs font-medium text-accent">
+                Ver en Inventario →
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* FILTROS */}
       <section className="card p-4 flex flex-wrap gap-4 items-end">
@@ -278,7 +424,7 @@ export default function DashboardPage() {
       {/* COSTOS (información confidencial) */}
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted">Costos del periodo filtrado</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <Metric
             label="Gasto en playeras"
             value={<ProfitValue value={`Q${costoProductos.toFixed(2)}`} className="text-3xl font-semibold" />}
@@ -289,6 +435,12 @@ export default function DashboardPage() {
             label="Costo DTF"
             value={<ProfitValue value={`Q${dtfTotal.toFixed(2)}`} className="text-3xl font-semibold" />}
             icon={<Printer size={18} />}
+            raw
+          />
+          <Metric
+            label="Otros insumos"
+            value={<ProfitValue value={`Q${otherSuppliesTotal.toFixed(2)}`} className="text-3xl font-semibold" />}
+            icon={<Wrench size={18} />}
             raw
           />
         </div>
