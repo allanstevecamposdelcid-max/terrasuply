@@ -171,13 +171,13 @@ export default function SeguimientoResultPage() {
               <div className="flex justify-center">
                 <div
                   className={`w-20 h-20 rounded-full flex items-center justify-center ${
-                    enviado ? "bg-accent/15" : "bg-yellow-500/15"
-                  } animate-glow-pulse`}
+                    enviado ? "bg-accent" : "bg-red-500"
+                  } ${enviado ? "animate-glow-pulse" : "animate-glow-pulse-red"}`}
                 >
                   {enviado ? (
-                    <Truck size={30} className="text-accent" />
+                    <Truck size={30} className="text-black" />
                   ) : (
-                    <Package size={30} className="text-yellow-600" />
+                    <Package size={30} className="text-white" />
                   )}
                 </div>
               </div>
@@ -306,10 +306,17 @@ function DetailRow({
 ===================== */
 
 function OrderProgress({ status }: { status: "pendiente" | "enviado" }) {
+  const enviado = status === "enviado";
+  // Mientras no esté enviado, el progreso se marca en rojo (en curso);
+  // al enviarse, todo el timeline pasa a verde (completado).
+  const doneBg = enviado ? "bg-accent text-black" : "bg-red-500 text-white";
+  const doneText = enviado ? "text-accent" : "text-red-500";
+  const doneLine = enviado ? "bg-accent" : "bg-red-500";
+
   const steps = [
     { key: "recibido", label: "Confirmado", icon: CheckCircle2, done: true },
     { key: "preparando", label: "Preparando", icon: Package, done: true },
-    { key: "enviado", label: "Enviado", icon: Truck, done: status === "enviado" },
+    { key: "enviado", label: "Enviado", icon: Truck, done: enviado },
   ];
 
   return (
@@ -322,14 +329,14 @@ function OrderProgress({ status }: { status: "pendiente" | "enviado" }) {
             <div className="flex flex-col items-center gap-2 shrink-0" style={{ width: 68 }}>
               <div
                 className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-500 ${
-                  s.done ? "bg-accent text-black" : "card-soft text-muted"
-                } ${isFrontier ? "animate-glow-pulse" : ""}`}
+                  s.done ? doneBg : "card-soft text-muted"
+                } ${isFrontier ? (enviado ? "animate-glow-pulse" : "animate-glow-pulse-red") : ""}`}
               >
                 <s.icon size={16} className={s.done ? "animate-scale-in" : ""} />
               </div>
               <span
                 className={`text-[11px] font-medium text-center leading-tight whitespace-nowrap ${
-                  s.done ? "text-accent" : "text-muted"
+                  s.done ? doneText : "text-muted"
                 }`}
               >
                 {s.label}
@@ -341,7 +348,7 @@ function OrderProgress({ status }: { status: "pendiente" | "enviado" }) {
                 style={{ background: "rgb(var(--border))" }}
               >
                 <div
-                  className="h-full bg-accent transition-all duration-700 ease-out"
+                  className={`h-full transition-all duration-700 ease-out ${doneLine}`}
                   style={{ width: steps[idx + 1].done ? "100%" : "0%" }}
                 />
               </div>

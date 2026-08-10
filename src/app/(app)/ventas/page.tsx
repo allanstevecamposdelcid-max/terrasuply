@@ -450,10 +450,8 @@ export default function VentasPage() {
                       <button
                         onClick={() => toggleStatus(s)}
                         title="Cambiar estado"
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition ${
-                          finalizado
-                            ? "bg-green-500/20 text-green-600"
-                            : "bg-yellow-500/20 text-yellow-600"
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-white shadow-sm transition ${
+                          finalizado ? "bg-green-500" : "bg-red-500"
                         }`}
                       >
                         <RefreshCw size={10} />

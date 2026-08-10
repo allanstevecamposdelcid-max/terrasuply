@@ -12,6 +12,7 @@ import {
   Package,
   Boxes,
   AlertTriangle,
+  Store,
   X,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ type Product = {
   id: string;
   name: string;
   sku: string | null;
+  supplier: string | null;
   stock: number;
   min_stock: number;
   cost: number;
@@ -50,7 +52,7 @@ export default function InventarioPage() {
 
     let query = supabase
       .from("products")
-      .select("id,name,sku,stock,min_stock,cost,price,active")
+      .select("id,name,sku,supplier,stock,min_stock,cost,price,active")
       .eq("active", true)
       .order("created_at", { ascending: false });
 
@@ -145,6 +147,12 @@ export default function InventarioPage() {
                         <div className="flex items-center gap-1 text-xs text-muted mt-0.5">
                           <Tag size={11} />
                           <span className="truncate">{p.sku}</span>
+                        </div>
+                      )}
+                      {p.supplier && (
+                        <div className="flex items-center gap-1 text-xs text-muted mt-0.5">
+                          <Store size={11} />
+                          <span className="truncate">{p.supplier}</span>
                         </div>
                       )}
                     </div>
@@ -251,6 +259,7 @@ function CreateProductModal({
 }) {
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
+  const [supplier, setSupplier] = useState("");
   const [stock, setStock] = useState<number | "">("");
   const [minStock, setMinStock] = useState<number | "">(5);
   const [cost, setCost] = useState<number | "">("");
@@ -263,6 +272,7 @@ function CreateProductModal({
     const { error } = await supabase.from("products").insert({
       name: name.trim(),
       sku: sku.trim() || null,
+      supplier: supplier.trim() || null,
       stock: Number(stock || 0),
       min_stock: Number(minStock === "" ? 5 : minStock),
       cost: Number(cost || 0),
@@ -279,6 +289,7 @@ function CreateProductModal({
       <ProductForm
         name={name} setName={setName}
         sku={sku} setSku={setSku}
+        supplier={supplier} setSupplier={setSupplier}
         stock={stock} setStock={setStock}
         minStock={minStock} setMinStock={setMinStock}
         cost={cost} setCost={setCost}
@@ -304,6 +315,7 @@ function EditProductModal({
 }) {
   const [name, setName] = useState(product.name);
   const [sku, setSku] = useState(product.sku ?? "");
+  const [supplier, setSupplier] = useState(product.supplier ?? "");
   const [stock, setStock] = useState<number | "">(product.stock);
   const [minStock, setMinStock] = useState<number | "">(product.min_stock ?? 5);
   const [cost, setCost] = useState<number | "">(product.cost);
@@ -317,6 +329,7 @@ function EditProductModal({
       .update({
         name: name.trim(),
         sku: sku.trim() || null,
+        supplier: supplier.trim() || null,
         stock: Number(stock || 0),
         min_stock: Number(minStock === "" ? 5 : minStock),
         cost: Number(cost || 0),
@@ -333,6 +346,7 @@ function EditProductModal({
       <ProductForm
         name={name} setName={setName}
         sku={sku} setSku={setSku}
+        supplier={supplier} setSupplier={setSupplier}
         stock={stock} setStock={setStock}
         minStock={minStock} setMinStock={setMinStock}
         cost={cost} setCost={setCost}
@@ -414,6 +428,7 @@ type NumField = number | "";
 function ProductForm({
   name, setName,
   sku, setSku,
+  supplier, setSupplier,
   stock, setStock,
   minStock, setMinStock,
   cost, setCost,
@@ -421,6 +436,7 @@ function ProductForm({
 }: {
   name: string; setName: (v: string) => void;
   sku: string; setSku: (v: string) => void;
+  supplier: string; setSupplier: (v: string) => void;
   stock: NumField; setStock: (v: NumField) => void;
   minStock: NumField; setMinStock: (v: NumField) => void;
   cost: NumField; setCost: (v: NumField) => void;
@@ -449,6 +465,16 @@ function ProductForm({
           placeholder="Código SKU (opcional)"
           value={sku}
           onChange={(e) => setSku(e.target.value)}
+        />
+      </div>
+
+      <div className="flex gap-2 items-center">
+        <Store size={16} className="text-muted shrink-0" />
+        <input
+          className="input input-bordered w-full"
+          placeholder="Proveedor / tienda (opcional)"
+          value={supplier}
+          onChange={(e) => setSupplier(e.target.value)}
         />
       </div>
 

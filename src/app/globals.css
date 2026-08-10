@@ -191,6 +191,24 @@ textarea:focus {
   animation: ts-glow-pulse 2.4s ease-in-out infinite;
 }
 
+@keyframes ts-glow-pulse-red {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgb(239 68 68 / 0.35),
+      0 0 26px 4px rgb(239 68 68 / 0.16);
+  }
+  50% {
+    box-shadow:
+      0 0 0 12px rgb(239 68 68 / 0),
+      0 0 34px 10px rgb(239 68 68 / 0.28);
+  }
+}
+
+.animate-glow-pulse-red {
+  animation: ts-glow-pulse-red 2.4s ease-in-out infinite;
+}
+
 @keyframes ts-scale-in {
   from {
     opacity: 0;
