@@ -46,6 +46,7 @@ type Sale = {
 type Expense = {
   amount: number;
   expense_date: string;
+  is_fixed: boolean;
 };
 
 type LowStockProduct = {
@@ -106,7 +107,7 @@ export default function DashboardPage() {
           unit_cost
         )
       `),
-      supabase.from("expenses").select("amount, expense_date"),
+      supabase.from("expenses").select("amount, expense_date, is_fixed"),
       supabase.from("products").select("id,name,stock,min_stock").eq("active", true),
     ]);
 
@@ -183,6 +184,8 @@ export default function DashboardPage() {
     () =>
       expenses
         .filter((e) => {
+          // Un gasto fijo cuenta siempre, sin importar el rango filtrado.
+          if (e.is_fixed) return true;
           if (from && e.expense_date < from) return false;
           if (to && e.expense_date > to) return false;
           return true;

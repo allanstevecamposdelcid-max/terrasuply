@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { todayLocalStr, isoToLocalDateStr } from "@/lib/date";
 import {
   Search,
   Plus,
@@ -644,6 +645,13 @@ type SupplierSaleLine = {
   subtotal: number;
 };
 
+type SaleItemWithDate = {
+  product_id: string;
+  qty: number;
+  unit_cost: number;
+  sales: { created_at: string } | null;
+};
+
 function SupplierSalesModal({
   initialSupplier,
   onClose,
@@ -653,6 +661,8 @@ function SupplierSalesModal({
 }) {
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [supplier, setSupplier] = useState(initialSupplier);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [lines, setLines] = useState<SupplierSaleLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -698,14 +708,20 @@ function SupplierSalesModal({
 
       const { data: items } = await supabase
         .from("sale_items")
-        .select("product_id,qty,unit_cost")
+        .select("product_id,qty,unit_cost,sales(created_at)")
         .in("product_id", ids);
 
       const nameById = new Map((prods || []).map((p) => [p.id, p.name as string]));
       const byProduct = new Map<string, { qty: number; subtotal: number }>();
 
-      (items || []).forEach((i) => {
-        const key = i.product_id as string;
+      ((items as unknown as SaleItemWithDate[]) || []).forEach((i) => {
+        const saleDate = i.sales?.created_at;
+        if (!saleDate) return;
+        const d = isoToLocalDateStr(saleDate);
+        if (from && d < from) return;
+        if (to && d > to) return;
+
+        const key = i.product_id;
         const prev = byProduct.get(key) || { qty: 0, subtotal: 0 };
         byProduct.set(key, {
           qty: prev.qty + i.qty,
@@ -728,7 +744,7 @@ function SupplierSalesModal({
     }
 
     loadReport();
-  }, [supplier]);
+  }, [supplier, from, to]);
 
   const total = lines.reduce((sum, l) => sum + l.subtotal, 0);
 
@@ -748,6 +764,55 @@ function SupplierSalesModal({
             </option>
           ))}
         </select>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="text-xs text-muted">Desde</label>
+            <input
+              type="date"
+              className="input input-bordered w-full"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted">Hasta</label>
+            <input
+              type="date"
+              className="input input-bordered w-full"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => { const t = todayLocalStr(); setFrom(t); setTo(t); }}
+            className="btn btn-ghost btn-sm card-soft"
+          >
+            Hoy
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const t = todayLocalStr();
+              setFrom(t.slice(0, 7) + "-01");
+              setTo(t);
+            }}
+            className="btn btn-ghost btn-sm card-soft"
+          >
+            Este mes
+          </button>
+          <button
+            type="button"
+            onClick={() => { setFrom(""); setTo(""); }}
+            className="btn btn-ghost btn-sm text-error"
+          >
+            Todo
+          </button>
+        </div>
 
         {loading && (
           <p className="text-sm text-muted text-center py-4">Calculando…</p>
